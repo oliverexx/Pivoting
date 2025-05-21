@@ -52,12 +52,6 @@
     - Casos de uso prácticos
     - Mejores prácticas
 
-## Requisitos
-- Sistema operativo: Linux (preferiblemente Kali Linux)
-- Bash shell
-- Permisos de administrador para algunas funcionalidades
-- Dependencias específicas para cada técnica (ver sección de instalación)
-- 
 ## Consideraciones de Seguridad
 - Usar solo en entornos autorizados
 - Documentar todas las acciones realizadas
