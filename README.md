@@ -1,4 +1,4 @@
-# Pivot34mo5-.sh
+# Pivoting.sh
 # Guía de Implementación de Técnicas de Pivoting
 
 ## Técnicas Implementadas
