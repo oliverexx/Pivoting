@@ -56,51 +56,30 @@ wait_for_enter() {
 show_menu() {
     clear_screen
     echo -e "${BLUE}=== HelpMemory - Port Forwarding y Pivoting ===${NC}"
-    echo -e "${YELLOW}Seleccione el tipo de port forwarding:${NC}"
-    echo -e "${GREEN}1.${NC} Port Forwarding Local (-L)"
-    echo -e "${GREEN}2.${NC} Port Forwarding Remoto (-R)"
-    echo -e "${GREEN}3.${NC} Port Forwarding Dinámico (-D)"
-    echo -e "${GREEN}4.${NC} Pivoting"
-    echo -e "${GREEN}5.${NC} Salir"
+    echo -e "${YELLOW}Seleccione una opción:${NC}"
+    echo -e "${GREEN}1.${NC} Port Forwarding"
+    echo -e "${GREEN}2.${NC} Pivoting"
+    echo -e "${GREEN}3.${NC} Salir"
     echo
     echo -n "Seleccione una opción: "
 }
 
-# Función para mostrar el menú de Port Forwarding Local
-show_local_forwarding_menu() {
+# Función para mostrar el menú de Port Forwarding
+show_port_forwarding_menu() {
     clear_screen
-    echo -e "${BLUE}=== Port Forwarding Local (-L) ===${NC}"
+    echo -e "${BLUE}=== Port Forwarding ===${NC}"
     echo -e "${YELLOW}Seleccione el método:${NC}"
-    echo -e "${GREEN}1.${NC} SSH Local Forwarding"
-    echo -e "${GREEN}2.${NC} Socat Local Forwarding"
-    echo -e "${GREEN}3.${NC} Chisel Local Forwarding"
-    echo -e "${GREEN}4.${NC} Volver al menú principal"
-    echo
-    echo -n "Seleccione una opción: "
-}
-
-# Función para mostrar el menú de Port Forwarding Remoto
-show_remote_forwarding_menu() {
-    clear_screen
-    echo -e "${BLUE}=== Port Forwarding Remoto (-R) ===${NC}"
-    echo -e "${YELLOW}Seleccione el método:${NC}"
-    echo -e "${GREEN}1.${NC} SSH Remote Forwarding"
-    echo -e "${GREEN}2.${NC} Socat Remote Forwarding"
-    echo -e "${GREEN}3.${NC} Chisel Remote Forwarding"
-    echo -e "${GREEN}4.${NC} Volver al menú principal"
-    echo
-    echo -n "Seleccione una opción: "
-}
-
-# Función para mostrar el menú de Port Forwarding Dinámico
-show_dynamic_forwarding_menu() {
-    clear_screen
-    echo -e "${BLUE}=== Port Forwarding Dinámico (-D) ===${NC}"
-    echo -e "${YELLOW}Seleccione el método:${NC}"
-    echo -e "${GREEN}1.${NC} SSH Dynamic Forwarding"
-    echo -e "${GREEN}2.${NC} Chisel Dynamic Forwarding"
-    echo -e "${GREEN}3.${NC} SocksOverRDP"
-    echo -e "${GREEN}4.${NC} Volver al menú principal"
+    echo -e "${GREEN}1.${NC} SSH Local Forwarding (-L)"
+    echo -e "${GREEN}2.${NC} SSH Remote Forwarding (-R)"
+    echo -e "${GREEN}3.${NC} SSH Dynamic Forwarding (-D)"
+    echo -e "${GREEN}4.${NC} Socat Forwarding"
+    echo -e "${GREEN}5.${NC} Chisel Forwarding"
+    echo -e "${GREEN}6.${NC} Plink Forwarding"
+    echo -e "${GREEN}7.${NC} Windows Netsh Forwarding"
+    echo -e "${GREEN}8.${NC} DNS Tunneling (Dnscat2)"
+    echo -e "${GREEN}9.${NC} ICMP Tunneling (ptunnel-ng)"
+    echo -e "${GREEN}10.${NC} SocksOverRDP"
+    echo -e "${GREEN}11.${NC} Volver al menú principal"
     echo
     echo -n "Seleccione una opción: "
 }
@@ -113,7 +92,9 @@ show_pivoting_menu() {
     echo -e "${GREEN}1.${NC} SSHuttle"
     echo -e "${GREEN}2.${NC} Proxychains"
     echo -e "${GREEN}3.${NC} Metasploit Autoroute"
-    echo -e "${GREEN}4.${NC} Volver al menú principal"
+    echo -e "${GREEN}4.${NC} rpivot"
+    echo -e "${GREEN}5.${NC} Metodologías de Pivoting en Escenarios Reales"
+    echo -e "${GREEN}6.${NC} Volver al menú principal"
     echo
     echo -n "Seleccione una opción: "
 }
@@ -359,6 +340,147 @@ implement_metasploit_autoroute() {
     echo "4. Automatización de rutas"
 }
 
+# Función para implementar Plink Forwarding
+implement_plink() {
+    echo -e "${BLUE}=== Plink Forwarding ===${NC}"
+    echo -e "${YELLOW}¿Qué es Plink?${NC}"
+    echo "Plink (PuTTY Link) es una versión de línea de comandos de PuTTY que permite"
+    echo "crear túneles SSH de manera eficiente. Es especialmente útil en sistemas"
+    echo "Windows para establecer conexiones seguras y túneles."
+    echo
+
+    echo -e "${GREEN}Comandos básicos:${NC}"
+    echo "1. Local Forwarding:"
+    echo "plink -L 8080:localhost:80 usuario@servidor"
+    echo
+    echo "2. Remote Forwarding:"
+    echo "plink -R 8080:localhost:80 usuario@servidor"
+    echo
+    echo "3. Dynamic Forwarding:"
+    echo "plink -D 9050 usuario@servidor"
+    echo
+    echo "4. Usando archivo de clave:"
+    echo "plink -i ruta/a/clave.ppk -L 8080:localhost:80 usuario@servidor"
+    echo
+
+    echo -e "${YELLOW}Notas importantes:${NC}"
+    echo "1. Requiere PuTTY instalado"
+    echo "2. Útil en sistemas Windows"
+    echo "3. Soporta autenticación por clave"
+    echo "4. Compatible con todos los tipos de forwarding"
+}
+
+# Función para implementar Windows Netsh Forwarding
+implement_netsh() {
+    echo -e "${BLUE}=== Windows Netsh Forwarding ===${NC}"
+    echo -e "${YELLOW}¿Qué es Netsh?${NC}"
+    echo "Netsh (Network Shell) es una herramienta de línea de comandos de Windows"
+    echo "que permite configurar y monitorear dispositivos de red en Windows."
+    echo
+
+    echo -e "${GREEN}Comandos básicos:${NC}"
+    echo "1. IPv4 a IPv4:"
+    echo "netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=3389 connectaddress=172.16.5.25"
+    echo
+    echo "2. IPv4 a IPv6:"
+    echo "netsh interface portproxy add v4tov6 listenport=8080 listenaddress=0.0.0.0 connectport=3389 connectaddress=2001:db8::1"
+    echo
+    echo "3. Ver reglas actuales:"
+    echo "netsh interface portproxy show all"
+    echo
+    echo "4. Eliminar regla:"
+    echo "netsh interface portproxy delete v4tov4 listenport=8080 listenaddress=0.0.0.0"
+    echo
+
+    echo -e "${YELLOW}Notas importantes:${NC}"
+    echo "1. Requiere Windows 7 o superior"
+    echo "2. Necesita permisos de administrador"
+    echo "3. Soporta IPv4 e IPv6"
+    echo "4. Útil para reenvío de puertos en Windows"
+}
+
+# Función para implementar DNS Tunneling con Dnscat2
+implement_dnscat2() {
+    echo -e "${BLUE}=== DNS Tunneling con Dnscat2 ===${NC}"
+    echo -e "${YELLOW}¿Qué es Dnscat2?${NC}"
+    echo "Dnscat2 es una herramienta de tunelización que utiliza el protocolo DNS para"
+    echo "enviar datos entre dos hosts. Utiliza un canal cifrado de Comando y Control (C&C)"
+    echo "y envía datos dentro de registros TXT dentro del protocolo DNS."
+    echo
+
+    echo -e "${GREEN}Comandos básicos:${NC}"
+    echo "1. Iniciar servidor:"
+    echo "ruby dnscat2.rb --dns host=IP_DNS,port=53,domain=dominio.com --no-cache"
+    echo
+    echo "2. Cliente Windows (PowerShell):"
+    echo "Import-Module .\dnscat2.ps1"
+    echo "Start-Dnscat2 -DNSserver IP_DNS -Domain dominio.com -PreSharedSecret CLAVE"
+    echo
+    echo "3. Cliente Linux:"
+    echo "./dnscat2 dominio.com"
+    echo
+
+    echo -e "${YELLOW}Notas importantes:${NC}"
+    echo "1. Requiere Ruby y Bundler"
+    echo "2. Necesita acceso a un servidor DNS"
+    echo "3. Útil para evadir firewalls"
+    echo "4. El tráfico está encriptado"
+}
+
+# Función para implementar ICMP Tunneling con ptunnel-ng
+implement_ptunnel() {
+    echo -e "${BLUE}=== ICMP Tunneling con ptunnel-ng ===${NC}"
+    echo -e "${YELLOW}¿Qué es ptunnel-ng?${NC}"
+    echo "ptunnel-ng es una herramienta que permite crear túneles ICMP, encapsulando"
+    echo "tráfico dentro de paquetes ICMP (ping). Es especialmente útil para evadir"
+    echo "firewalls que permiten tráfico ICMP pero bloquean otros protocolos."
+    echo
+
+    echo -e "${GREEN}Comandos básicos:${NC}"
+    echo "1. Iniciar servidor:"
+    echo "sudo ./ptunnel-ng -rIP_DESTINO -R3389"
+    echo
+    echo "2. Iniciar cliente:"
+    echo "sudo ./ptunnel-ng -pIP_SERVIDOR -l3388 -rIP_DESTINO -R3389"
+    echo
+    echo "3. Verificar conexión:"
+    echo "telnet 127.0.0.1 3388"
+    echo
+
+    echo -e "${YELLOW}Notas importantes:${NC}"
+    echo "1. Requiere permisos de administrador"
+    echo "2. El firewall debe permitir ICMP"
+    echo "3. Útil para evadir firewalls"
+    echo "4. Encapsula tráfico TCP en ICMP"
+}
+
+# Función para implementar Pivoting con rpivot
+implement_pivoting() {
+    echo -e "${BLUE}=== Pivoting con rpivot ===${NC}"
+    echo -e "${YELLOW}¿Qué es rpivot?${NC}"
+    echo "rpivot es una herramienta especializada para realizar pivoting de manera"
+    echo "eficiente y segura. Permite crear túneles SSH inversos a través de hosts"
+    echo "comprometidos, facilitando el acceso a redes internas."
+    echo
+
+    echo -e "${GREEN}Comandos básicos:${NC}"
+    echo "1. Iniciar servidor:"
+    echo "python server.py --server-port 9999 --server-ip 0.0.0.0"
+    echo
+    echo "2. Iniciar cliente:"
+    echo "python client.py --server-ip IP_SERVIDOR --server-port 9999"
+    echo
+    echo "3. Configurar proxychains:"
+    echo "socks4 127.0.0.1 1080"
+    echo
+
+    echo -e "${YELLOW}Notas importantes:${NC}"
+    echo "1. Requiere Python"
+    echo "2. Crea túneles SSH inversos"
+    echo "3. Útil para pivoting en redes"
+    echo "4. Soporta múltiples conexiones"
+}
+
 # =============================================================================
 # Bucle principal
 # =============================================================================
@@ -371,14 +493,21 @@ main() {
         case $option in
             1)
                 while true; do
-                    show_local_forwarding_menu
-                    read -r local_option
+                    show_port_forwarding_menu
+                    read -r pf_option
 
-                    case $local_option in
+                    case $pf_option in
                         1) implement_ssh_local_forwarding ;;
-                        2) implement_socat_forwarding ;;
-                        3) implement_chisel_forwarding ;;
-                        4) break ;;
+                        2) implement_ssh_remote_forwarding ;;
+                        3) implement_ssh_dynamic_forwarding ;;
+                        4) implement_socat_forwarding ;;
+                        5) implement_chisel_forwarding ;;
+                        6) implement_plink ;;
+                        7) implement_netsh ;;
+                        8) implement_dnscat2 ;;
+                        9) implement_ptunnel ;;
+                        10) implement_socks_over_rdp ;;
+                        11) break ;;
                         *) show_error "Opción inválida" ;;
                     esac
 
@@ -387,38 +516,6 @@ main() {
                 ;;
             2)
                 while true; do
-                    show_remote_forwarding_menu
-                    read -r remote_option
-
-                    case $remote_option in
-                        1) implement_ssh_remote_forwarding ;;
-                        2) implement_socat_forwarding ;;
-                        3) implement_chisel_forwarding ;;
-                        4) break ;;
-                        *) show_error "Opción inválida" ;;
-                    esac
-
-                    wait_for_enter
-                done
-                ;;
-            3)
-                while true; do
-                    show_dynamic_forwarding_menu
-                    read -r dynamic_option
-
-                    case $dynamic_option in
-                        1) implement_ssh_dynamic_forwarding ;;
-                        2) implement_chisel_forwarding ;;
-                        3) implement_socks_over_rdp ;;
-                        4) break ;;
-                        *) show_error "Opción inválida" ;;
-                    esac
-
-                    wait_for_enter
-                done
-                ;;
-            4)
-                while true; do
                     show_pivoting_menu
                     read -r pivoting_option
 
@@ -426,14 +523,16 @@ main() {
                         1) implement_sshuttle ;;
                         2) implement_proxychains ;;
                         3) implement_metasploit_autoroute ;;
-                        4) break ;;
+                        4) implement_pivoting ;;
+                        5) implement_real_world_pivoting ;;
+                        6) break ;;
                         *) show_error "Opción inválida" ;;
                     esac
 
                     wait_for_enter
                 done
                 ;;
-            5)
+            3)
                 show_success "Saliendo..."
                 exit 0
                 ;;
