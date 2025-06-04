@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =============================================================================
-# Script: helpmemory.sh
+# Script: pivoting.sh
 # Descripción: Herramienta para implementación de port forwarding y pivoting
 # Autor: Oliver
-# Fecha: 2024
+# Fecha: 2025
 # =============================================================================
 
 # Colores para el menú
@@ -93,8 +93,9 @@ show_pivoting_menu() {
     echo -e "${GREEN}2.${NC} Proxychains"
     echo -e "${GREEN}3.${NC} Metasploit Autoroute"
     echo -e "${GREEN}4.${NC} rpivot"
-    echo -e "${GREEN}5.${NC} Metodologías de Pivoting en Escenarios Reales"
-    echo -e "${GREEN}6.${NC} Volver al menú principal"
+    echo -e "${GREEN}5.${NC} Gigolo"
+    echo -e "${GREEN}6.${NC} Metodologías de Pivoting en Escenarios Reales"
+    echo -e "${GREEN}7.${NC} Volver al menú principal"
     echo
     echo -n "Seleccione una opción: "
 }
@@ -463,22 +464,133 @@ implement_pivoting() {
     echo "comprometidos, facilitando el acceso a redes internas."
     echo
 
+    echo -e "${GREEN}Arquitectura:${NC}"
+    echo "1. Servidor (Máquina Atacante):"
+    echo "   - Escucha conexiones entrantes"
+    echo "   - Gestiona las conexiones de pivoting"
+    echo "   - Debe ser accesible desde la víctima"
+    echo
+    echo "2. Cliente (Máquina Víctima):"
+    echo "   - Inicia la conexión al servidor"
+    echo "   - Actúa como punto de pivote"
+    echo "   - Debe tener Python instalado"
+    echo
+
     echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Iniciar servidor:"
-    echo "python server.py --server-port 9999 --server-ip 0.0.0.0"
+    echo "1. En la máquina atacante (servidor):"
+    echo "   python server.py --server-port 9999 --server-ip 0.0.0.0"
+    echo "   # 0.0.0.0 permite conexiones desde cualquier IP"
     echo
-    echo "2. Iniciar cliente:"
-    echo "python client.py --server-ip IP_SERVIDOR --server-port 9999"
+    echo "2. En la máquina víctima (cliente):"
+    echo "   python client.py --server-ip IP_ATACANTE --server-port 9999"
+    echo "   # IP_ATACANTE es la IP de tu máquina atacante"
     echo
-    echo "3. Configurar proxychains:"
-    echo "socks4 127.0.0.1 1080"
+    echo "3. Configurar proxychains en la máquina atacante:"
+    echo "   # Editar /etc/proxychains.conf"
+    echo "   socks4 127.0.0.1 1080"
     echo
 
     echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere Python"
-    echo "2. Crea túneles SSH inversos"
+    echo "1. Requiere Python en ambas máquinas"
+    echo "2. El servidor debe ser accesible desde la víctima"
     echo "3. Útil para pivoting en redes"
     echo "4. Soporta múltiples conexiones"
+    echo "5. El tráfico está encriptado"
+    echo
+    echo -e "${YELLOW}Consideraciones de seguridad:${NC}"
+    echo "1. Asegúrate de que el puerto del servidor esté abierto"
+    echo "2. Considera usar un puerto no estándar"
+    echo "3. Verifica que la conexión sea estable"
+    echo "4. Monitorea el tráfico de red"
+}
+
+# Función para implementar Gigolo
+implement_gigolo() {
+    echo -e "${BLUE}=== Gigolo ===${NC}"
+    echo -e "${YELLOW}¿Qué es Gigolo?${NC}"
+    echo "Gigolo es una herramienta gráfica para gestionar conexiones remotas"
+    echo "y túneles SSH. Permite crear y gestionar conexiones de manera"
+    echo "intuitiva a través de una interfaz gráfica."
+    echo
+
+    echo -e "${GREEN}Características principales:${NC}"
+    echo "1. Interfaz gráfica intuitiva"
+    echo "2. Gestión de conexiones SSH"
+    echo "3. Soporte para túneles locales y remotos"
+    echo "4. Gestión de claves SSH"
+    echo
+
+    echo -e "${GREEN}Uso básico:${NC}"
+    echo "1. Instalación:"
+    echo "sudo apt-get install gigolo"
+    echo
+    echo "2. Configuración de conexión:"
+    echo "- Abrir Gigolo"
+    echo "- Click en 'Conectar'"
+    echo "- Seleccionar 'SSH'"
+    echo "- Configurar host, usuario y puerto"
+    echo
+    echo "3. Configuración de túnel:"
+    echo "- Seleccionar 'Túnel'"
+    echo "- Configurar puerto local y remoto"
+    echo "- Activar 'Reenviar puerto'"
+    echo
+
+    echo -e "${YELLOW}Notas importantes:${NC}"
+    echo "1. Requiere entorno gráfico"
+    echo "2. Ideal para usuarios que prefieren GUI"
+    echo "3. Soporta múltiples conexiones"
+    echo "4. Útil para gestión de túneles SSH"
+}
+
+# Función para implementar Metodologías de Pivoting en Escenarios Reales
+implement_real_world_pivoting() {
+    echo -e "${BLUE}=== Metodologías de Pivoting en Escenarios Reales ===${NC}"
+    echo -e "${YELLOW}¿Qué son las metodologías de pivoting?${NC}"
+    echo "Son técnicas y estrategias utilizadas para moverse lateralmente"
+    echo "a través de una red comprometida, permitiendo acceder a sistemas"
+    echo "que no son directamente accesibles desde el exterior."
+    echo
+
+    echo -e "${GREEN}Metodologías comunes:${NC}"
+    echo "1. Pivoting de Capa 2:"
+    echo "   - ARP Spoofing"
+    echo "   - MAC Flooding"
+    echo "   - VLAN Hopping"
+    echo
+    echo "2. Pivoting de Capa 3:"
+    echo "   - IP Forwarding"
+    echo "   - Túneles SSH"
+    echo "   - VPNs"
+    echo
+    echo "3. Pivoting de Capa 7:"
+    echo "   - Proxies"
+    echo "   - Túneles DNS"
+    echo "   - Túneles HTTP/HTTPS"
+    echo
+
+    echo -e "${GREEN}Escenarios comunes:${NC}"
+    echo "1. Red DMZ:"
+    echo "   - Comprometer servidor web"
+    echo "   - Establecer túnel SSH"
+    echo "   - Acceder a red interna"
+    echo
+    echo "2. Red Corporativa:"
+    echo "   - Comprometer estación de trabajo"
+    echo "   - Elevar privilegios"
+    echo "   - Moverse a servidores"
+    echo
+    echo "3. Red Cloud:"
+    echo "   - Comprometer instancia"
+    echo "   - Acceder a metadatos"
+    echo "   - Moverse entre regiones"
+    echo
+
+    echo -e "${YELLOW}Consideraciones importantes:${NC}"
+    echo "1. Mantener bajo perfil"
+    echo "2. Documentar rutas"
+    echo "3. Mantener persistencia"
+    echo "4. Considerar impacto"
 }
 
 # =============================================================================
@@ -524,8 +636,9 @@ main() {
                         2) implement_proxychains ;;
                         3) implement_metasploit_autoroute ;;
                         4) implement_pivoting ;;
-                        5) implement_real_world_pivoting ;;
-                        6) break ;;
+                        5) implement_gigolo ;;
+                        6) implement_real_world_pivoting ;;
+                        7) break ;;
                         *) show_error "Opción inválida" ;;
                     esac
 
