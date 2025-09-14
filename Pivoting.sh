@@ -10,11 +10,11 @@ MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Configuración global
-JUMP_HOST="192.168.1.100"
-TARGET_NETWORK="192.168.2.0/24"
-LOCAL_PORT="1080"
-REMOTE_PORT="3389"
-SOCKS_PORT="1080"
+JUMP_HOST=""
+TARGET_NETWORK=""
+LOCAL_PORT=""
+REMOTE_PORT=""
+SOCKS_PORT=""
 
 # Función para mostrar el banner
 show_banner() {
