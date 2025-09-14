@@ -16,10 +16,6 @@ LOCAL_PORT="1080"
 REMOTE_PORT="3389"
 SOCKS_PORT="1080"
 
-
-
-
-
 # Función para mostrar el banner
 show_banner() {
     clear
