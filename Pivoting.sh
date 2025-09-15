@@ -26,7 +26,9 @@ echo "==========================================================================
 echo ""
 echo "Descripción:# Network Pivoting & Discovery"
 echo "Guía completa de técnicas de pivoting y descubrimiento de redes"
-echo "Autor: Oliver - github: "
+echo "Autor: Oliver - github: https://github.com/oliverexx"
+echo "github: https://github.com/oliverexx"
+echo "Linkedin: www.linkedin.com/in/axel-tear"
 echo "Fecha: 2025"
 echo "==============================================================================="
 
